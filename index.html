@@ -130,32 +130,29 @@
                 console.log('用户代理:', userAgent);
                 
                 try {
-                    // 请求设备方向权限
+                    // 直接添加事件监听，不依赖权限请求
+                    // 某些浏览器可能不需要显式权限
+                    if (hasOrientation) {
+                        window.addEventListener('deviceorientation', handleDeviceOrientation);
+                        console.log('设备方向事件已添加');
+                    }
+                    
+                    if (hasMotion) {
+                        window.addEventListener('devicemotion', handleDeviceMotion);
+                        console.log('设备运动事件已添加');
+                    }
+                    
+                    // 尝试请求权限（如果需要）
                     if (needsPermissionOrientation) {
                         console.log('请求设备方向权限...');
                         const permissionState = await DeviceOrientationEvent.requestPermission();
                         console.log('设备方向权限状态:', permissionState);
-                        if (permissionState === 'granted') {
-                            window.addEventListener('deviceorientation', handleDeviceOrientation);
-                            console.log('设备方向事件已添加');
-                        }
-                    } else if (hasOrientation) {
-                        window.addEventListener('deviceorientation', handleDeviceOrientation);
-                        console.log('设备方向事件已添加（无需权限）');
                     }
-
-                    // 请求设备运动权限
+                    
                     if (needsPermissionMotion) {
                         console.log('请求设备运动权限...');
                         const permissionState = await DeviceMotionEvent.requestPermission();
                         console.log('设备运动权限状态:', permissionState);
-                        if (permissionState === 'granted') {
-                            window.addEventListener('devicemotion', handleDeviceMotion);
-                            console.log('设备运动事件已添加');
-                        }
-                    } else if (hasMotion) {
-                        window.addEventListener('devicemotion', handleDeviceMotion);
-                        console.log('设备运动事件已添加（无需权限）');
                     }
 
                     // 隐藏开始按钮
@@ -245,11 +242,18 @@
             // rotationRate: 旋转速率
             if (event.rotationRate) {
                 const z = event.rotationRate.alpha || 0;
-                // 平滑处理旋转速度，避免突变
-                gameState.rotationSpeed = gameState.rotationSpeed * 0.8 + Math.abs(z) * 0.2;
+                const x = event.rotationRate.gamma || 0;
+                const y = event.rotationRate.beta || 0;
                 
-                // 检测是否正在旋转
-                gameState.isRotating = gameState.rotationSpeed > 1;
+                // 综合计算旋转速度，增加敏感度
+                const rotationMagnitude = Math.sqrt(x*x + y*y + z*z);
+                // 平滑处理旋转速度，避免突变
+                gameState.rotationSpeed = gameState.rotationSpeed * 0.7 + rotationMagnitude * 0.3;
+                
+                // 降低旋转检测阈值，增加敏感度
+                gameState.isRotating = gameState.rotationSpeed > 0.5;
+                
+                console.log('旋转速度:', gameState.rotationSpeed, '是否旋转:', gameState.isRotating);
             }
 
             // 检测向前的加速度
@@ -265,13 +269,16 @@
                 // 更新上次加速度数据
                 gameState.lastAcceleration = currentAcc;
                 
+                console.log('加速度:', currentAcc, '变化:', { deltaX, deltaY, deltaZ });
+                
                 // 检测向前的加速度（y轴负方向）
-                // 确保只有明显的向前加速度才会触发发射
-                if (currentAcc.y < config.forwardThreshold && 
-                    deltaY > 5 && // 确保是突然的加速度变化
+                // 降低阈值，增加敏感度
+                if (currentAcc.y < -5 && // 降低向前加速度阈值
+                    deltaY > 3 && // 降低加速度变化阈值
                     gameState.isRotating && // 确保正在旋转
-                    gameState.rotationSpeed > config.powerThreshold && // 确保旋转速度足够
+                    gameState.rotationSpeed > 2 && // 降低旋转速度阈值
                     !gameState.isFlying) { // 确保不在飞行中
+                    console.log('发射飞刀！');
                     launchKnife();
                 }
             }
