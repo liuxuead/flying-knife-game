@@ -53,20 +53,6 @@
         #startBtn:active {
             transform: translate(-50%, -50%) scale(0.95);
         }
-        #debugInfo {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            font-size: 12px;
-            max-width: 90%;
-            max-height: 200px;
-            overflow-y: auto;
-            font-family: Arial, sans-serif;
-        }
     </style>
 </head>
 <body>
@@ -76,7 +62,6 @@
         击中靶子得分
     </div>
     <button id="startBtn">开始游戏</button>
-    <div id="debugInfo"></div>
     <canvas id="gameCanvas"></canvas>
     <script>
         // 游戏状态
@@ -472,7 +457,6 @@
             ctx.textAlign = 'left';
             ctx.fillText('分数: ' + gameState.score, 20, 30);
             ctx.fillText('等级: ' + gameState.level, 20, 60);
-            ctx.fillText('动力: ' + Math.round(gameState.rotationSpeed * 10) / 10, 20, 90);
         }
 
         // 更新游戏状态
@@ -525,27 +509,7 @@
             drawHUD();
             update();
 
-            const debugInfo = 
-                '游戏状态:\n' +
-                '- 旋转速度: ' + gameState.rotationSpeed.toFixed(2) + '\n' +
-                '- 旋转方向: ' + (gameState.rotationDirection > 0 ? '顺时针' : '逆时针') + '\n' +
-                '- 刀角度: ' + (gameState.knifeAngle * 180 / Math.PI % 360).toFixed(0) + '°\n' +
-                '- 飞行速度: ' + gameState.knifeSpeed.toFixed(2) + '\n' +
-                '- 是否飞行: ' + (gameState.isFlying ? '是' : '否') + '\n' +
-                '- 是否旋转: ' + (gameState.isRotating ? '是' : '否') + '\n' +
-                '- 是否触摸: ' + (gameState.isTouching ? '是' : '否') + '\n' +
-                '- 分数: ' + gameState.score + '\n' +
-                '- 等级: ' + gameState.level + '\n\n' +
-                '操作说明:\n' +
-                '1. 手指左右快速滑动旋转飞刀\n' +
-                '2. 手指向上快速滑动发射飞刀\n' +
-                '3. 旋转速度越快，发射力度越大\n\n' +
-                '提示: 先左右滑动让刀旋转起来，然后快速向上滑发射';
-            
-            const debugElement = document.getElementById('debugInfo');
-            if (debugElement) {
-                debugElement.innerHTML = debugInfo.replace(/\n/g, '<br>');
-            }
+
 
             requestAnimationFrame(gameLoop);
         }
