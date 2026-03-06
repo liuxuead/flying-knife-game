@@ -53,6 +53,20 @@
         #startBtn:active {
             transform: translate(-50%, -50%) scale(0.95);
         }
+        #debugInfo {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            max-width: 90%;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: Arial, sans-serif;
+        }
     </style>
 </head>
 <body>
@@ -62,7 +76,7 @@
         击中靶子得分
     </div>
     <button id="startBtn">开始游戏</button>
-    <div id="debugInfo" style="position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 10px; border-radius: 5px; font-size: 12px; max-width: 90%; max-height: 200px; overflow-y: auto;"></div>
+    <div id="debugInfo"></div>
     <canvas id="gameCanvas"></canvas>
     <script>
         // 游戏状态
@@ -75,20 +89,18 @@
             targetPosition: { x: 0, y: 0 },
             score: 0,
             level: 1,
-            isRotating: false, // 是否正在旋转
-            isTouching: false // 是否正在触摸
+            isRotating: false,
+            isTouching: false
         };
 
         // 游戏配置
         const config = {
-            palmSize: 0.3, // 手掌占屏幕高度的比例
-            mistColor: 'rgba(173, 216, 230, 0.5)', // 淡蓝色半透明
-            mistShape: 'yin-yang', // 阴阳鱼形状
-            knifeLength: 200, // 增加刀的长度一倍
+            palmSize: 0.3,
+            mistColor: 'rgba(173, 216, 230, 0.5)',
+            mistShape: 'yin-yang',
+            knifeLength: 200,
             knifeWidth: 10,
-            targetSize: 50,
-            powerThreshold: 5, // 发射阈值
-            forwardThreshold: -10 // 向前加速度阈值
+            targetSize: 50
         };
 
         // 获取Canvas元素
@@ -99,7 +111,6 @@
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            // 初始化靶子位置
             gameState.targetPosition = {
                 x: canvas.width / 2,
                 y: canvas.height * 0.2
@@ -111,96 +122,24 @@
             resizeCanvas();
             window.addEventListener('resize', resizeCanvas);
             
-            // 设置开始按钮点击事件
             const startBtn = document.getElementById('startBtn');
-            startBtn.addEventListener('click', async () => {
-                console.log('开始按钮被点击');
-                
-                // 检测设备支持情况
-                const hasOrientation = typeof DeviceOrientationEvent !== 'undefined';
-                const hasMotion = typeof DeviceMotionEvent !== 'undefined';
-                const needsPermissionOrientation = hasOrientation && typeof DeviceOrientationEvent.requestPermission === 'function';
-                const needsPermissionMotion = hasMotion && typeof DeviceMotionEvent.requestPermission === 'function';
-                const isHTTPS = window.location.protocol === 'https:';
-                const userAgent = navigator.userAgent;
-                
-                console.log('设备方向支持:', hasOrientation, '需要权限:', needsPermissionOrientation);
-                console.log('设备运动支持:', hasMotion, '需要权限:', needsPermissionMotion);
-                console.log('是否HTTPS:', isHTTPS);
-                console.log('用户代理:', userAgent);
-                
-                // 检测设备是否支持传感器
-                let sensorStatus = '未测试';
-                
-                try {
-                    // 先尝试请求权限（iOS 13+ 需要）
-                    if (needsPermissionOrientation) {
-                        console.log('请求设备方向权限...');
-                        const permissionState = await DeviceOrientationEvent.requestPermission();
-                        console.log('设备方向权限状态:', permissionState);
-                        if (permissionState !== 'granted') {
-                            sensorStatus = '权限被拒绝';
-                        }
-                    }
-                    
-                    if (needsPermissionMotion) {
-                        console.log('请求设备运动权限...');
-                        const permissionState = await DeviceMotionEvent.requestPermission();
-                        console.log('设备运动权限状态:', permissionState);
-                        if (permissionState !== 'granted') {
-                            sensorStatus = '权限被拒绝';
-                        }
-                    }
-                    
-                    // 添加事件监听
-                    if (hasOrientation) {
-                        window.addEventListener('deviceorientation', handleDeviceOrientation);
-                        console.log('设备方向事件已添加');
-                    }
-                    
-                    if (hasMotion) {
-                        window.addEventListener('devicemotion', handleDeviceMotion);
-                        console.log('设备运动事件已添加');
-                    }
-
-                    // 隐藏开始按钮
-                    startBtn.style.display = 'none';
-                    console.log('传感器设置完成');
-                    
-                    // 显示调试信息
-                    alert('传感器设置完成！\n设备方向支持: ' + hasOrientation + '\n设备运动支持: ' + hasMotion + '\n是否HTTPS: ' + isHTTPS + '\n浏览器: ' + userAgent.substring(0, 50) + '...\n\n如果传感器不工作，请确保:\n1. 使用HTTPS访问\n2. 允许传感器权限\n3. 使用支持的浏览器（Chrome、Safari）');
-                } catch (err) {
-                    console.log('请求传感器权限失败:', err);
-                    sensorStatus = '错误: ' + err.message;
-                    alert('权限请求失败: ' + err.message + '\n是否HTTPS: ' + isHTTPS + '\n将启用触摸控制模式');
-                    
-                    // 即使失败也尝试添加事件监听（某些浏览器不需要权限）
-                    if (hasOrientation) {
-                        window.addEventListener('deviceorientation', handleDeviceOrientation);
-                        console.log('设备方向事件已添加（备用方案）');
-                    }
-                    if (hasMotion) {
-                        window.addEventListener('devicemotion', handleDeviceMotion);
-                        console.log('设备运动事件已添加（备用方案）');
-                    }
-                    startBtn.style.display = 'none';
-                }
-                
-                // 启用触摸控制作为备用方案
+            startBtn.addEventListener('click', () => {
+                console.log('开始游戏');
+                startBtn.style.display = 'none';
                 setupTouchControls();
             });
 
             gameLoop();
         }
         
-        // 触摸控制方案
+        // 触摸控制
         function setupTouchControls() {
             let touchStartX = 0;
             let touchStartY = 0;
             let touchStartTime = 0;
             let isTouching = false;
             let lastTouchX = 0;
-            let touchHistory = []; // 记录触摸历史，用于检测滑动速度
+            let touchHistory = [];
             
             canvas.addEventListener('touchstart', (e) => {
                 e.preventDefault();
@@ -211,7 +150,7 @@
                 touchStartTime = Date.now();
                 isTouching = true;
                 gameState.isTouching = true;
-                touchHistory = []; // 清空历史
+                touchHistory = [];
                 
                 console.log('触摸开始:', touchStartX, touchStartY);
             }, { passive: false });
@@ -224,34 +163,28 @@
                 const currentX = touch.clientX;
                 const currentY = touch.clientY;
                 const deltaX = currentX - lastTouchX;
-                const deltaY = currentY - touchStartY;
                 
-                // 记录触摸历史（用于计算滑动速度）
                 touchHistory.push({
                     x: currentX,
                     y: currentY,
                     time: Date.now()
                 });
-                // 只保留最近10个记录
                 if (touchHistory.length > 10) {
                     touchHistory.shift();
                 }
                 
-                // 水平滑动控制旋转（在屏幕任意位置滑动都可以）
-                // 滑动速度越快，旋转速度越快
                 const slideSpeed = Math.abs(deltaX);
-                gameState.rotationSpeed = Math.min(slideSpeed * 3, 100); // 增加敏感度，限制最大速度
+                gameState.rotationSpeed = Math.min(slideSpeed * 3, 100);
                 gameState.rotationDirection = deltaX > 0 ? 1 : -1;
                 gameState.isRotating = gameState.rotationSpeed > 1;
                 
-                // 根据滑动更新飞刀角度（视觉反馈）
                 if (!gameState.isFlying) {
-                    gameState.knifeAngle += deltaX * 0.02; // 增加旋转响应
+                    gameState.knifeAngle += deltaX * 0.02;
                 }
                 
                 lastTouchX = currentX;
                 
-                console.log('触摸移动:', 'deltaX:', deltaX, '旋转速度:', gameState.rotationSpeed);
+                console.log('触摸移动: deltaX=' + deltaX + ' 旋转速度=' + gameState.rotationSpeed);
             }, { passive: false });
             
             canvas.addEventListener('touchend', (e) => {
@@ -263,8 +196,6 @@
                 const touchEndTime = Date.now();
                 const touchDuration = touchEndTime - touchStartTime;
                 
-                // 检测是否是向上滑动发射
-                // 需要：1. 触摸历史足够 2. 整体向上移动 3. 旋转速度足够
                 if (touchHistory.length >= 2 && !gameState.isFlying) {
                     const startPoint = touchHistory[0];
                     const endPoint = touchHistory[touchHistory.length - 1];
@@ -272,15 +203,9 @@
                     const totalDeltaX = endPoint.x - startPoint.x;
                     const slideDuration = endPoint.time - startPoint.time;
                     
-                    // 计算向上滑动速度（像素/毫秒）
                     const upwardSpeed = Math.abs(totalDeltaY) / Math.max(slideDuration, 1);
                     
-                    // 发射条件（放宽条件，更容易触发）：
-                    // 1. 整体向上滑动（deltaY < -30，即向上移动超过30像素）
-                    // 2. 旋转速度足够（> 3）
-                    // 3. 滑动速度足够快（> 0.3 像素/毫秒）
-                    // 4. 水平移动不要太大（避免左右甩动）
-                    console.log('检测发射:', '向上距离:', totalDeltaY, '速度:', upwardSpeed.toFixed(2), '旋转速度:', gameState.rotationSpeed.toFixed(2));
+                    console.log('检测发射: 向上距离=' + totalDeltaY + ' 速度=' + upwardSpeed.toFixed(2) + ' 旋转速度=' + gameState.rotationSpeed.toFixed(2));
                     
                     if (totalDeltaY < -30 && 
                         gameState.rotationSpeed > 3 && 
@@ -291,15 +216,13 @@
                     }
                 }
                 
-                // 逐渐减慢旋转速度（模拟惯性）
                 const slowDown = () => {
                     if (!isTouching && gameState.rotationSpeed > 0 && !gameState.isFlying) {
-                        gameState.rotationSpeed *= 0.95; // 减慢减速速度，让惯性更明显
+                        gameState.rotationSpeed *= 0.95;
                         if (gameState.rotationSpeed < 0.5) {
                             gameState.rotationSpeed = 0;
                             gameState.isRotating = false;
                         } else {
-                            // 继续旋转
                             gameState.knifeAngle += gameState.rotationSpeed * 0.015 * gameState.rotationDirection;
                             requestAnimationFrame(slowDown);
                         }
@@ -307,83 +230,16 @@
                 };
                 slowDown();
                 
-                console.log('触摸结束:', '持续时间:', touchDuration, '最终旋转速度:', gameState.rotationSpeed);
+                console.log('触摸结束: 持续时间=' + touchDuration + 'ms 最终旋转速度=' + gameState.rotationSpeed);
             }, { passive: false });
             
             console.log('触摸控制已启用');
         }
 
-        // 处理设备方向事件
-        function handleDeviceOrientation(event) {
-            gameState.orientationEventCount++;
-            
-            // alpha: 围绕z轴的旋转角度 (0-360)
-            // beta: 围绕x轴的旋转角度 (-180到180)
-            // gamma: 围绕y轴的旋转角度 (-90到90)
-            if (event.alpha !== null) {
-                // 计算旋转方向
-                gameState.rotationDirection = event.alpha > 180 ? -1 : 1;
-            }
-        }
-
-        // 处理设备运动事件
-        function handleDeviceMotion(event) {
-            gameState.motionEventCount++;
-            
-            // acceleration: 加速度数据
-            // rotationRate: 旋转速率
-            if (event.rotationRate) {
-                const z = event.rotationRate.alpha || 0;
-                const x = event.rotationRate.gamma || 0;
-                const y = event.rotationRate.beta || 0;
-                
-                // 综合计算旋转速度，增加敏感度
-                const rotationMagnitude = Math.sqrt(x*x + y*y + z*z);
-                // 平滑处理旋转速度，避免突变
-                gameState.rotationSpeed = gameState.rotationSpeed * 0.7 + rotationMagnitude * 0.3;
-                
-                // 降低旋转检测阈值，增加敏感度
-                gameState.isRotating = gameState.rotationSpeed > 0.5;
-                
-                console.log('旋转速度:', gameState.rotationSpeed, '是否旋转:', gameState.isRotating);
-            }
-
-            // 检测向前的加速度
-            if (event.accelerationIncludingGravity) {
-                const acc = event.accelerationIncludingGravity;
-                const currentAcc = { x: acc.x || 0, y: acc.y || 0, z: acc.z || 0 };
-                
-                // 计算加速度变化
-                const deltaX = Math.abs(currentAcc.x - gameState.lastAcceleration.x);
-                const deltaY = Math.abs(currentAcc.y - gameState.lastAcceleration.y);
-                const deltaZ = Math.abs(currentAcc.z - gameState.lastAcceleration.z);
-                
-                // 更新上次加速度数据
-                gameState.lastAcceleration = currentAcc;
-                
-                console.log('加速度:', currentAcc, '变化:', { deltaX, deltaY, deltaZ });
-                
-                // 检测向前的加速度（y轴负方向）
-                // 降低阈值，增加敏感度
-                if (currentAcc.y < -5 && // 降低向前加速度阈值
-                    deltaY > 3 && // 降低加速度变化阈值
-                    gameState.isRotating && // 确保正在旋转
-                    gameState.rotationSpeed > 2 && // 降低旋转速度阈值
-                    !gameState.isFlying) { // 确保不在飞行中
-                    console.log('发射飞刀！');
-                    launchKnife();
-                }
-            }
-        }
-
         // 发射飞刀
         function launchKnife() {
             gameState.isFlying = true;
-            // 使用当前旋转速度作为初始飞行速度
-            // 旋转速度越快，飞得越快越远
             gameState.knifeSpeed = gameState.rotationSpeed * 0.3;
-            // 飞刀保持当前角度向上飞行
-            // 不需要修改角度，保持旋转时的角度
         }
 
         // 绘制手掌
@@ -393,7 +249,6 @@
             const palmX = canvas.width / 2;
             const palmY = canvas.height - palmHeight / 2;
 
-            // 绘制手掌轮廓
             ctx.beginPath();
             ctx.arc(palmX, palmY, palmWidth / 2, 0, Math.PI, true);
             ctx.lineTo(palmX - palmWidth / 2, palmY + palmHeight * 0.3);
@@ -405,11 +260,9 @@
             ctx.lineWidth = 2;
             ctx.stroke();
 
-            // 绘制手指
             const fingerWidth = palmWidth * 0.15;
             const fingerHeight = palmHeight * 0.4;
             
-            // 拇指
             ctx.beginPath();
             ctx.ellipse(palmX - palmWidth * 0.3, palmY - palmHeight * 0.1, fingerWidth, fingerHeight, Math.PI / 4, 0, Math.PI * 2);
             ctx.fillStyle = '#f5d76e';
@@ -417,7 +270,6 @@
             ctx.strokeStyle = '#d35400';
             ctx.stroke();
 
-            // 其他手指
             for (let i = 0; i < 4; i++) {
                 const fingerX = palmX - palmWidth * 0.25 + i * palmWidth * 0.2;
                 ctx.beginPath();
@@ -440,13 +292,11 @@
             ctx.globalAlpha = 0.5;
             
             if (config.mistShape === 'yin-yang') {
-                // 绘制阴阳鱼形状的雾气
                 ctx.beginPath();
                 ctx.arc(mistX, mistY, mistWidth / 2, 0, Math.PI * 2);
                 ctx.fillStyle = config.mistColor;
                 ctx.fill();
 
-                // 绘制阴阳鱼的眼睛
                 ctx.beginPath();
                 ctx.arc(mistX - mistWidth * 0.2, mistY, mistWidth * 0.1, 0, Math.PI * 2);
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
@@ -457,7 +307,6 @@
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
                 ctx.fill();
             } else {
-                // 绘制圆形雾气
                 ctx.beginPath();
                 ctx.arc(mistX, mistY, mistWidth / 2, 0, Math.PI * 2);
                 ctx.fillStyle = config.mistColor;
@@ -472,13 +321,11 @@
             let knifeX, knifeY;
             
             if (gameState.isFlying) {
-                // 飞行时计算位置
                 const startY = canvas.height - canvas.height * config.palmSize - canvas.height * config.palmSize * 0.4;
                 const flightDistance = gameState.knifeSpeed * 10;
                 knifeX = canvas.width / 2;
                 knifeY = startY - flightDistance;
             } else {
-                // 未飞行时固定在雾气上方
                 const mistHeight = canvas.height * config.palmSize * 0.8;
                 knifeX = canvas.width / 2;
                 knifeY = canvas.height - canvas.height * config.palmSize - mistHeight / 2;
@@ -488,7 +335,6 @@
             ctx.translate(knifeX, knifeY);
             ctx.rotate(gameState.knifeAngle);
 
-            // 绘制刀柄（中心位置）
             ctx.beginPath();
             ctx.rect(-config.knifeWidth * 1.2, -config.knifeWidth * 2, config.knifeWidth * 2.4, config.knifeWidth * 4);
             ctx.fillStyle = '#8b4513';
@@ -497,7 +343,6 @@
             ctx.lineWidth = 2;
             ctx.stroke();
 
-            // 绘制左边刀尖
             ctx.beginPath();
             ctx.moveTo(-config.knifeWidth * 1.2, 0);
             ctx.lineTo(-config.knifeLength / 2, -config.knifeWidth / 2);
@@ -508,7 +353,6 @@
             ctx.strokeStyle = '#8b0000';
             ctx.stroke();
 
-            // 绘制右边刀尖
             ctx.beginPath();
             ctx.moveTo(config.knifeWidth * 1.2, 0);
             ctx.lineTo(config.knifeLength / 2, -config.knifeWidth / 2);
@@ -527,7 +371,6 @@
             const target = gameState.targetPosition;
             const size = config.targetSize;
 
-            // 绘制靶子外圈
             ctx.beginPath();
             ctx.arc(target.x, target.y, size, 0, Math.PI * 2);
             ctx.fillStyle = '#e74c3c';
@@ -536,7 +379,6 @@
             ctx.lineWidth = 4;
             ctx.stroke();
 
-            // 绘制靶子中圈
             ctx.beginPath();
             ctx.arc(target.x, target.y, size * 0.7, 0, Math.PI * 2);
             ctx.fillStyle = '#f39c12';
@@ -544,7 +386,6 @@
             ctx.strokeStyle = '#d35400';
             ctx.stroke();
 
-            // 绘制靶子内圈
             ctx.beginPath();
             ctx.arc(target.x, target.y, size * 0.4, 0, Math.PI * 2);
             ctx.fillStyle = '#27ae60';
@@ -552,7 +393,6 @@
             ctx.strokeStyle = '#229954';
             ctx.stroke();
 
-            // 绘制靶子中心
             ctx.beginPath();
             ctx.arc(target.x, target.y, size * 0.15, 0, Math.PI * 2);
             ctx.fillStyle = '#3498db';
@@ -566,57 +406,41 @@
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
             ctx.font = '20px Arial';
             ctx.textAlign = 'left';
-            ctx.fillText(`分数: ${gameState.score}`, 20, 30);
-            ctx.fillText(`等级: ${gameState.level}`, 20, 60);
-            ctx.fillText(`动力: ${Math.round(gameState.rotationSpeed * 10) / 10}`, 20, 90);
+            ctx.fillText('分数: ' + gameState.score, 20, 30);
+            ctx.fillText('等级: ' + gameState.level, 20, 60);
+            ctx.fillText('动力: ' + Math.round(gameState.rotationSpeed * 10) / 10, 20, 90);
         }
 
         // 更新游戏状态
         function update() {
-            // 更新飞刀角度
             if (!gameState.isFlying) {
-                // 触摸控制时，角度已经在touchmove中更新
-                // 这里只处理惯性旋转（当不在触摸但还有旋转速度时）
                 if (gameState.rotationSpeed > 0.1 && !gameState.isTouching) {
                     gameState.knifeAngle += gameState.rotationSpeed * 0.01 * gameState.rotationDirection;
                 }
             } else {
-                // 飞刀飞行
-                // 逐渐增加飞行距离（模拟加速）
                 gameState.knifeSpeed += 0.5;
-                
-                // 飞刀继续旋转（视觉效果）
                 gameState.knifeAngle += 0.2;
                 
-                // 计算飞刀位置 - 向上飞行
-                // 从屏幕底部中心向上飞行
                 const startY = canvas.height - canvas.height * config.palmSize - canvas.height * config.palmSize * 0.4;
-                const flightDistance = gameState.knifeSpeed * 10; // 飞行距离
+                const flightDistance = gameState.knifeSpeed * 10;
                 const knifeX = canvas.width / 2;
                 const knifeY = startY - flightDistance;
 
-                // 检测是否击中靶子
                 const target = gameState.targetPosition;
                 const distance = Math.sqrt(Math.pow(knifeX - target.x, 2) + Math.pow(knifeY - target.y, 2));
                 
                 if (distance < config.targetSize) {
-                    // 击中靶子
                     gameState.score += 10;
                     gameState.isFlying = false;
                     gameState.knifeSpeed = 0;
-                    // 重新设置靶子位置
                     gameState.targetPosition = {
                         x: Math.random() * (canvas.width - config.targetSize * 2) + config.targetSize,
                         y: Math.random() * (canvas.height * 0.3) + config.targetSize
                     };
-                    // 升级
                     if (gameState.score % 50 === 0) {
                         gameState.level++;
-                        // 调整游戏难度
-                        config.powerThreshold += 0.5;
                     }
                 } else if (knifeY < 0 || knifeX < 0 || knifeX > canvas.width) {
-                    // 飞刀飞出屏幕
                     gameState.isFlying = false;
                     gameState.knifeSpeed = 0;
                 }
@@ -625,66 +449,44 @@
 
         // 游戏主循环
         function gameLoop() {
-            // 清空画布
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 绘制背景
             const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
             gradient.addColorStop(0, '#667eea');
             gradient.addColorStop(1, '#764ba2');
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // 绘制靶子
             drawTarget();
-
-            // 绘制手掌
             drawPalm();
-
-            // 绘制雾气
             drawMist();
-
-            // 绘制飞刀
             drawKnife();
-
-            // 绘制HUD
             drawHUD();
-
-            // 更新游戏状态
             update();
 
-            // 更新调试信息
-            const debugInfo = `
-游戏状态:
-- 旋转速度: ${gameState.rotationSpeed.toFixed(2)}
-- 旋转方向: ${gameState.rotationDirection > 0 ? '顺时针' : '逆时针'}
-- 刀角度: ${(gameState.knifeAngle * 180 / Math.PI % 360).toFixed(0)}°
-- 飞行速度: ${gameState.knifeSpeed.toFixed(2)}
-- 是否飞行: ${gameState.isFlying ? '是' : '否'}
-- 是否旋转: ${gameState.isRotating ? '是' : '否'}
-- 是否触摸: ${gameState.isTouching ? '是' : '否'}
-- 分数: ${gameState.score}
-- 等级: ${gameState.level}
-
-操作说明:
-1. 手指左右快速滑动旋转飞刀
-2. 手指向上快速滑动发射飞刀
-3. 旋转速度越快，发射力度越大
-
-提示: 先左右滑动让刀旋转起来，然后快速向上滑发射
-            `;
-            updateDebugInfo(debugInfo);
-
-            // 请求下一帧
-            requestAnimationFrame(gameLoop);
-        }
-
-        // 更新调试信息
-        function updateDebugInfo(info) {
+            const debugInfo = 
+                '游戏状态:\n' +
+                '- 旋转速度: ' + gameState.rotationSpeed.toFixed(2) + '\n' +
+                '- 旋转方向: ' + (gameState.rotationDirection > 0 ? '顺时针' : '逆时针') + '\n' +
+                '- 刀角度: ' + (gameState.knifeAngle * 180 / Math.PI % 360).toFixed(0) + '°\n' +
+                '- 飞行速度: ' + gameState.knifeSpeed.toFixed(2) + '\n' +
+                '- 是否飞行: ' + (gameState.isFlying ? '是' : '否') + '\n' +
+                '- 是否旋转: ' + (gameState.isRotating ? '是' : '否') + '\n' +
+                '- 是否触摸: ' + (gameState.isTouching ? '是' : '否') + '\n' +
+                '- 分数: ' + gameState.score + '\n' +
+                '- 等级: ' + gameState.level + '\n\n' +
+                '操作说明:\n' +
+                '1. 手指左右快速滑动旋转飞刀\n' +
+                '2. 手指向上快速滑动发射飞刀\n' +
+                '3. 旋转速度越快，发射力度越大\n\n' +
+                '提示: 先左右滑动让刀旋转起来，然后快速向上滑发射';
+            
             const debugElement = document.getElementById('debugInfo');
             if (debugElement) {
-                debugElement.innerHTML = info;
+                debugElement.innerHTML = debugInfo.replace(/\n/g, '<br>');
             }
+
+            requestAnimationFrame(gameLoop);
         }
 
         // 启动游戏
