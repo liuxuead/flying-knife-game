@@ -103,6 +103,43 @@
             targetSize: 50
         };
 
+        // 图片资源
+        const images = {
+            knife: null,
+            palm: null,
+            mist: null,
+            target: null,
+            loaded: 0,
+            total: 4
+        };
+
+        // 加载图片
+        function loadImages() {
+            const imageFiles = [
+                { name: 'knife', src: 'knife.png' },
+                { name: 'palm', src: 'palm.png' },
+                { name: 'mist', src: 'mist.png' },
+                { name: 'target', src: 'target.png' }
+            ];
+
+            imageFiles.forEach((imageInfo) => {
+                const img = new Image();
+                img.src = imageInfo.src;
+                img.onload = () => {
+                    images[imageInfo.name] = img;
+                    images.loaded++;
+                    console.log(`已加载: ${imageInfo.src}`);
+                    if (images.loaded === images.total) {
+                        console.log('所有图片加载完成');
+                    }
+                };
+                img.onerror = () => {
+                    console.error(`加载失败: ${imageInfo.src}`);
+                    images.loaded++;
+                };
+            });
+        }
+
         // 获取Canvas元素
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -121,6 +158,7 @@
         function init() {
             resizeCanvas();
             window.addEventListener('resize', resizeCanvas);
+            loadImages();
             
             const startBtn = document.getElementById('startBtn');
             startBtn.addEventListener('click', () => {
@@ -242,41 +280,38 @@
             gameState.knifeSpeed = gameState.rotationSpeed * 0.3;
         }
 
+        // 重置游戏状态
+        function resetGameState() {
+            gameState.isFlying = false;
+            gameState.knifeSpeed = 0;
+            gameState.rotationSpeed = 0;
+            gameState.rotationDirection = 0;
+            gameState.knifeAngle = 0;
+            gameState.isRotating = false;
+            gameState.isTouching = false;
+        }
+
         // 绘制手掌
         function drawPalm() {
             const palmHeight = canvas.height * config.palmSize;
-            const palmWidth = palmHeight * 0.8;
             const palmX = canvas.width / 2;
             const palmY = canvas.height - palmHeight / 2;
 
-            ctx.beginPath();
-            ctx.arc(palmX, palmY, palmWidth / 2, 0, Math.PI, true);
-            ctx.lineTo(palmX - palmWidth / 2, palmY + palmHeight * 0.3);
-            ctx.quadraticCurveTo(palmX, palmY + palmHeight * 0.6, palmX + palmWidth / 2, palmY + palmHeight * 0.3);
-            ctx.closePath();
-            ctx.fillStyle = '#f5d76e';
-            ctx.fill();
-            ctx.strokeStyle = '#d35400';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            const fingerWidth = palmWidth * 0.15;
-            const fingerHeight = palmHeight * 0.4;
-            
-            ctx.beginPath();
-            ctx.ellipse(palmX - palmWidth * 0.3, palmY - palmHeight * 0.1, fingerWidth, fingerHeight, Math.PI / 4, 0, Math.PI * 2);
-            ctx.fillStyle = '#f5d76e';
-            ctx.fill();
-            ctx.strokeStyle = '#d35400';
-            ctx.stroke();
-
-            for (let i = 0; i < 4; i++) {
-                const fingerX = palmX - palmWidth * 0.25 + i * palmWidth * 0.2;
+            if (images.palm) {
+                const palmWidth = palmHeight * (images.palm.width / images.palm.height);
+                ctx.drawImage(images.palm, palmX - palmWidth / 2, palmY - palmHeight / 2, palmWidth, palmHeight);
+            } else {
+                // 备用绘制
+                const palmWidth = palmHeight * 0.8;
                 ctx.beginPath();
-                ctx.ellipse(fingerX, palmY - palmHeight * 0.2, fingerWidth, fingerHeight, 0, 0, Math.PI * 2);
+                ctx.arc(palmX, palmY, palmWidth / 2, 0, Math.PI, true);
+                ctx.lineTo(palmX - palmWidth / 2, palmY + palmHeight * 0.3);
+                ctx.quadraticCurveTo(palmX, palmY + palmHeight * 0.6, palmX + palmWidth / 2, palmY + palmHeight * 0.3);
+                ctx.closePath();
                 ctx.fillStyle = '#f5d76e';
                 ctx.fill();
                 ctx.strokeStyle = '#d35400';
+                ctx.lineWidth = 2;
                 ctx.stroke();
             }
         }
@@ -284,36 +319,43 @@
         // 绘制雾气
         function drawMist() {
             const mistHeight = canvas.height * config.palmSize * 0.8;
-            const mistWidth = mistHeight * 1.2;
             const mistX = canvas.width / 2;
             const mistY = canvas.height - canvas.height * config.palmSize - mistHeight / 2;
 
-            ctx.save();
-            ctx.globalAlpha = 0.5;
-            
-            if (config.mistShape === 'yin-yang') {
-                ctx.beginPath();
-                ctx.arc(mistX, mistY, mistWidth / 2, 0, Math.PI * 2);
-                ctx.fillStyle = config.mistColor;
-                ctx.fill();
-
-                ctx.beginPath();
-                ctx.arc(mistX - mistWidth * 0.2, mistY, mistWidth * 0.1, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-                ctx.fill();
-
-                ctx.beginPath();
-                ctx.arc(mistX + mistWidth * 0.2, mistY, mistWidth * 0.1, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-                ctx.fill();
+            if (images.mist) {
+                const mistWidth = mistHeight * (images.mist.width / images.mist.height);
+                ctx.globalAlpha = 0.8;
+                ctx.drawImage(images.mist, mistX - mistWidth / 2, mistY - mistHeight / 2, mistWidth, mistHeight);
+                ctx.globalAlpha = 1;
             } else {
-                ctx.beginPath();
-                ctx.arc(mistX, mistY, mistWidth / 2, 0, Math.PI * 2);
-                ctx.fillStyle = config.mistColor;
-                ctx.fill();
-            }
+                // 备用绘制
+                ctx.save();
+                ctx.globalAlpha = 0.5;
+                
+                if (config.mistShape === 'yin-yang') {
+                    ctx.beginPath();
+                    ctx.arc(mistX, mistY, mistWidth / 2, 0, Math.PI * 2);
+                    ctx.fillStyle = config.mistColor;
+                    ctx.fill();
 
-            ctx.restore();
+                    ctx.beginPath();
+                    ctx.arc(mistX - mistWidth * 0.2, mistY, mistWidth * 0.1, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(255,255,255, 0.8)';
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.arc(mistX + mistWidth * 0.2, mistY, mistWidth * 0.1, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                    ctx.fill();
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(mistX, mistY, mistWidth / 2, 0, Math.PI * 2);
+                    ctx.fillStyle = config.mistColor;
+                    ctx.fill();
+                }
+
+                ctx.restore();
+            }
         }
 
         // 绘制飞刀
@@ -331,74 +373,95 @@
                 knifeY = canvas.height - canvas.height * config.palmSize - mistHeight / 2;
             }
 
-            ctx.save();
-            ctx.translate(knifeX, knifeY);
-            ctx.rotate(gameState.knifeAngle);
+            if (images.knife) {
+                const knifeWidth = canvas.height * 0.15;
+                const knifeHeight = knifeWidth * (images.knife.height / images.knife.width);
+                
+                ctx.save();
+                ctx.translate(knifeX, knifeY);
+                ctx.rotate(gameState.knifeAngle);
+                ctx.drawImage(images.knife, -knifeWidth / 2, -knifeHeight / 2, knifeWidth, knifeHeight);
+                ctx.restore();
+            } else {
+                // 备用绘制
+                ctx.save();
+                ctx.translate(knifeX, knifeY);
+                ctx.rotate(gameState.knifeAngle);
 
-            ctx.beginPath();
-            ctx.rect(-config.knifeWidth * 1.2, -config.knifeWidth * 2, config.knifeWidth * 2.4, config.knifeWidth * 4);
-            ctx.fillStyle = '#8b4513';
-            ctx.fill();
-            ctx.strokeStyle = '#5d2f0a';
-            ctx.lineWidth = 2;
-            ctx.stroke();
+                ctx.beginPath();
+                ctx.rect(-config.knifeWidth * 1.2, -config.knifeWidth * 2, config.knifeWidth * 2.4, config.knifeWidth * 4);
+                ctx.fillStyle = '#8b4513';
+                ctx.fill();
+                ctx.strokeStyle = '#5d2f0a';
+                ctx.lineWidth = 2;
+                ctx.stroke();
 
-            ctx.beginPath();
-            ctx.moveTo(-config.knifeWidth * 1.2, 0);
-            ctx.lineTo(-config.knifeLength / 2, -config.knifeWidth / 2);
-            ctx.lineTo(-config.knifeLength / 2, config.knifeWidth / 2);
-            ctx.closePath();
-            ctx.fillStyle = '#c0392b';
-            ctx.fill();
-            ctx.strokeStyle = '#8b0000';
-            ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(-config.knifeWidth * 1.2, 0);
+                ctx.lineTo(-config.knifeLength / 2, -config.knifeWidth / 2);
+                ctx.lineTo(-config.knifeLength / 2, config.knifeWidth / 2);
+                ctx.closePath();
+                ctx.fillStyle = '#c0392b';
+                ctx.fill();
+                ctx.strokeStyle = '#8b0000';
+                ctx.stroke();
 
-            ctx.beginPath();
-            ctx.moveTo(config.knifeWidth * 1.2, 0);
-            ctx.lineTo(config.knifeLength / 2, -config.knifeWidth / 2);
-            ctx.lineTo(config.knifeLength / 2, config.knifeWidth / 2);
-            ctx.closePath();
-            ctx.fillStyle = '#c0392b';
-            ctx.fill();
-            ctx.strokeStyle = '#8b0000';
-            ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(config.knifeWidth * 1.2, 0);
+                ctx.lineTo(config.knifeLength / 2, -config.knifeWidth / 2);
+                ctx.lineTo(config.knifeLength / 2, config.knifeWidth / 2);
+                ctx.closePath();
+                ctx.fillStyle = '#c0392b';
+                ctx.fill();
+                ctx.strokeStyle = '#8b0000';
+                ctx.stroke();
 
-            ctx.restore();
+                ctx.restore();
+            }
         }
 
         // 绘制靶子
         function drawTarget() {
             const target = gameState.targetPosition;
-            const size = config.targetSize;
 
-            ctx.beginPath();
-            ctx.arc(target.x, target.y, size, 0, Math.PI * 2);
-            ctx.fillStyle = '#e74c3c';
-            ctx.fill();
-            ctx.strokeStyle = '#c0392b';
-            ctx.lineWidth = 4;
-            ctx.stroke();
+            if (images.target) {
+                const targetSize = canvas.height * 0.1;
+                const targetWidth = targetSize;
+                const targetHeight = targetSize * (images.target.height / images.target.width);
+                ctx.drawImage(images.target, target.x - targetWidth / 2, target.y - targetHeight / 2, targetWidth, targetHeight);
+            } else {
+                // 备用绘制
+                const size = config.targetSize;
 
-            ctx.beginPath();
-            ctx.arc(target.x, target.y, size * 0.7, 0, Math.PI * 2);
-            ctx.fillStyle = '#f39c12';
-            ctx.fill();
-            ctx.strokeStyle = '#d35400';
-            ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(target.x, target.y, size, 0, Math.PI * 2);
+                ctx.fillStyle = '#e74c3c';
+                ctx.fill();
+                ctx.strokeStyle = '#c0392b';
+                ctx.lineWidth = 4;
+                ctx.stroke();
 
-            ctx.beginPath();
-            ctx.arc(target.x, target.y, size * 0.4, 0, Math.PI * 2);
-            ctx.fillStyle = '#27ae60';
-            ctx.fill();
-            ctx.strokeStyle = '#229954';
-            ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(target.x, target.y, size * 0.7, 0, Math.PI * 2);
+                ctx.fillStyle = '#f39c12';
+                ctx.fill();
+                ctx.strokeStyle = '#d35400';
+                ctx.stroke();
 
-            ctx.beginPath();
-            ctx.arc(target.x, target.y, size * 0.15, 0, Math.PI * 2);
-            ctx.fillStyle = '#3498db';
-            ctx.fill();
-            ctx.strokeStyle = '#2980b9';
-            ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(target.x, target.y, size * 0.4, 0, Math.PI * 2);
+                ctx.fillStyle = '#27ae60';
+                ctx.fill();
+                ctx.strokeStyle = '#229954';
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(target.x, target.y, size * 0.15, 0, Math.PI * 2);
+                ctx.fillStyle = '#3498db';
+                ctx.fill();
+                ctx.strokeStyle = '#2980b9';
+                ctx.stroke();
+            }
         }
 
         // 绘制分数和等级
@@ -419,7 +482,6 @@
                 }
             } else {
                 gameState.knifeSpeed += 0.5;
-                gameState.knifeAngle += 0.2;
                 
                 const startY = canvas.height - canvas.height * config.palmSize - canvas.height * config.palmSize * 0.4;
                 const flightDistance = gameState.knifeSpeed * 10;
@@ -429,20 +491,18 @@
                 const target = gameState.targetPosition;
                 const distance = Math.sqrt(Math.pow(knifeX - target.x, 2) + Math.pow(knifeY - target.y, 2));
                 
-                if (distance < config.targetSize) {
+                if (distance < canvas.height * 0.05) {
                     gameState.score += 10;
-                    gameState.isFlying = false;
-                    gameState.knifeSpeed = 0;
+                    resetGameState();
                     gameState.targetPosition = {
-                        x: Math.random() * (canvas.width - config.targetSize * 2) + config.targetSize,
-                        y: Math.random() * (canvas.height * 0.3) + config.targetSize
+                        x: Math.random() * (canvas.width - canvas.height * 0.1) + canvas.height * 0.05,
+                        y: Math.random() * (canvas.height * 0.3) + canvas.height * 0.05
                     };
                     if (gameState.score % 50 === 0) {
                         gameState.level++;
                     }
                 } else if (knifeY < 0 || knifeX < 0 || knifeX > canvas.width) {
-                    gameState.isFlying = false;
-                    gameState.knifeSpeed = 0;
+                    resetGameState();
                 }
             }
         }
