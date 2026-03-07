@@ -450,15 +450,6 @@
             }
         }
 
-        // 绘制分数和等级
-        function drawHUD() {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.font = '20px Arial';
-            ctx.textAlign = 'left';
-            ctx.fillText('分数: ' + gameState.score, 20, 30);
-            ctx.fillText('等级: ' + gameState.level, 20, 60);
-        }
-
         // 更新游戏状态
         function update() {
             if (!gameState.isFlying) {
@@ -506,7 +497,6 @@
             drawPalm();
             drawMist();
             drawKnife();
-            drawHUD();
             update();
 
 
