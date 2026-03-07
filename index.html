@@ -472,8 +472,8 @@
                             );
                             
                             if (distanceToLine < config.coalBallSize + 20) {
-                                // 计算反弹方向（与滑动方向相反）
-                                const angle = Math.atan2(deltaY, deltaX) + Math.PI;
+                                // 计算反弹方向（按照手指滑动的方向）
+                                const angle = Math.atan2(deltaY, deltaX);
                                 
                                 // 设置新的目标位置（屏幕外）
                                 const bounceDistance = 200;
