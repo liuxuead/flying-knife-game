@@ -276,29 +276,9 @@
             gameState.isTouching = false;
         }
 
-        // 绘制手掌
+        // 绘制手掌（已禁用）
         function drawPalm() {
-            const palmHeight = canvas.height * config.palmSize;
-            const palmX = canvas.width / 2;
-            const palmY = canvas.height - palmHeight / 2;
-
-            if (images.palm) {
-                const palmWidth = palmHeight * (images.palm.width / images.palm.height);
-                ctx.drawImage(images.palm, palmX - palmWidth / 2, palmY - palmHeight / 2, palmWidth, palmHeight);
-            } else {
-                // 备用绘制
-                const palmWidth = palmHeight * 0.8;
-                ctx.beginPath();
-                ctx.arc(palmX, palmY, palmWidth / 2, 0, Math.PI, true);
-                ctx.lineTo(palmX - palmWidth / 2, palmY + palmHeight * 0.3);
-                ctx.quadraticCurveTo(palmX, palmY + palmHeight * 0.6, palmX + palmWidth / 2, palmY + palmHeight * 0.3);
-                ctx.closePath();
-                ctx.fillStyle = '#f5d76e';
-                ctx.fill();
-                ctx.strokeStyle = '#d35400';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-            }
+            // 不绘制手掌
         }
 
         // 绘制雾气
@@ -470,9 +450,10 @@
                 if (distance < canvas.height * 0.05) {
                     gameState.score += 10;
                     resetGameState();
+                    // 靶子位置固定在屏幕上半部分，y坐标在 5%-25% 之间
                     gameState.targetPosition = {
                         x: Math.random() * (canvas.width - canvas.height * 0.1) + canvas.height * 0.05,
-                        y: Math.random() * (canvas.height * 0.3) + canvas.height * 0.05
+                        y: Math.random() * (canvas.height * 0.2) + canvas.height * 0.05
                     };
                     if (gameState.score % 50 === 0) {
                         gameState.level++;
@@ -498,8 +479,6 @@
             drawMist();
             drawKnife();
             update();
-
-
 
             requestAnimationFrame(gameLoop);
         }
