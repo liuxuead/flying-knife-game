@@ -314,8 +314,8 @@
                 Math.pow(pos.y - campPosition.y, 2)
             );
             
-            // 检查是否在营地范围内（考虑煤球半径）
-            return distance <= config.campRadius + config.coalBallSize;
+            // 检查是否在营地范围内（当煤球边缘进入营地时触发）
+            return distance <= config.campRadius;
         }
 
         // 更新游戏状态
