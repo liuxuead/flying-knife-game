@@ -357,11 +357,11 @@
                     addDebugMessage('营地半径: ' + config.campRadius);
                 }
                 
-                // 如果煤球从外部进入营地（上一帧在外，当前帧在内），扣分
+                // 如果煤球从外部进入营地（上一帧在外，当前帧在内），扣血
                 if (!wasInCamp && inCamp && !coalBall.isBouncing) {
-                    addDebugMessage('执行扣分，当前得分: ' + gameState.score);
-                    gameState.score = Math.max(0, gameState.score - config.scoreDecrease);
-                    addDebugMessage('扣分后得分: ' + gameState.score);
+                    addDebugMessage('执行扣血，当前生命值: ' + gameState.health);
+                    gameState.health = Math.max(0, gameState.health - config.healthDecrease);
+                    addDebugMessage('扣血后生命值: ' + gameState.health);
                 }
                 
                 // 如果煤球正在弹飞，检查是否已经飞出营地
@@ -377,10 +377,10 @@
                     );
                     
                     // 如果超出营地范围，将其拉回边界内
-                    if (distanceFromCenter > config.campRadius) {
+                    if (distanceFromCenter > config.campRadius - config.coalBallSize) {
                         const angle = Math.atan2(coalBall.y - campPosition.y, coalBall.x - campPosition.x);
-                        coalBall.x = campPosition.x + Math.cos(angle) * config.campRadius;
-                        coalBall.y = campPosition.y + Math.sin(angle) * config.campRadius;
+                        coalBall.x = campPosition.x + Math.cos(angle) * (config.campRadius - config.coalBallSize);
+                        coalBall.y = campPosition.y + Math.sin(angle) * (config.campRadius - config.coalBallSize);
                         // 在边界内随机改变方向
                         coalBall.angle = Math.atan2(campPosition.y - coalBall.y, campPosition.x - coalBall.x) + (Math.random() - 0.5) * Math.PI;
                     }
