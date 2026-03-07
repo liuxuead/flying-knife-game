@@ -78,22 +78,20 @@
 
         // 游戏配置
         const config = {
-            campSize: {
-                width: 120,
-                height: 80
-            },
+            campRadius: 150, // 营地半径（像素）
             coalBallSize: 30, // 煤球大小（半径）
             coalBallSpeed: 2, // 煤球移动速度
             coalBallMaxTime: 3000, // 煤球最大停留时间（毫秒）
             healthDecrease: 10, // 每次减少的生命值
-            healthDecreaseInterval: 1000 // 生命值减少间隔（毫秒）
+            healthDecreaseInterval: 1000, // 生命值减少间隔（毫秒）
+            scoreDecrease: 10 // 进入营地扣分数
         };
 
         // 获取Canvas元素
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
-        // 营地位置
+        // 营地位置（中心坐标）
         let campPosition = {
             x: 0,
             y: 0
@@ -104,8 +102,8 @@
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
             // 营地位置：屏幕中间
-            campPosition.x = canvas.width / 2 - config.campSize.width / 2;
-            campPosition.y = canvas.height / 2 - config.campSize.height / 2;
+            campPosition.x = canvas.width / 2;
+            campPosition.y = canvas.height / 2;
         }
 
         // 生成煤球
@@ -133,9 +131,9 @@
                     break;
             }
 
-            // 目标位置：营地区域内随机点
-            const targetX = campPosition.x + Math.random() * config.campSize.width;
-            const targetY = campPosition.y + Math.random() * config.campSize.height;
+            // 目标位置：营地中心附近
+            const targetX = campPosition.x + (Math.random() - 0.5) * config.campRadius * 0.5;
+            const targetY = campPosition.y + (Math.random() - 0.5) * config.campRadius * 0.5;
 
             // 创建煤球
             const coalBall = {
@@ -146,7 +144,8 @@
                 speed: config.coalBallSpeed + Math.random() * 1, // 随机速度
                 angle: Math.atan2(targetY - y, targetX - x),
                 timeInCamp: 0,
-                lastHealthDecrease: 0
+                lastHealthDecrease: 0,
+                inCamp: false // 标记是否在营地内
             };
 
             gameState.coalBalls.push(coalBall);
@@ -210,31 +209,29 @@
         function drawCamp() {
             ctx.save();
             
-            // 绘制营地主体
+            // 绘制营地范围（半透明圆形）
+            ctx.beginPath();
+            ctx.arc(campPosition.x, campPosition.y, config.campRadius, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(139, 69, 19, 0.2)';
+            ctx.fill();
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // 绘制营地中心标志
+            ctx.beginPath();
+            ctx.arc(campPosition.x, campPosition.y, 20, 0, Math.PI * 2);
             ctx.fillStyle = '#8B4513';
-            ctx.fillRect(campPosition.x, campPosition.y, config.campSize.width, config.campSize.height);
-            
-            // 绘制营地边框
-            ctx.strokeStyle = '#5D2F0A';
-            ctx.lineWidth = 4;
-            ctx.strokeRect(campPosition.x, campPosition.y, config.campSize.width, config.campSize.height);
-            
-            // 绘制营地门
-            const doorWidth = 40;
-            const doorHeight = 60;
-            ctx.fillStyle = '#333';
-            ctx.fillRect(
-                campPosition.x + (config.campSize.width - doorWidth) / 2,
-                campPosition.y + config.campSize.height - doorHeight,
-                doorWidth,
-                doorHeight
-            );
+            ctx.fill();
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 2;
+            ctx.stroke();
             
             // 绘制营地名
             ctx.fillStyle = 'white';
             ctx.font = '16px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText('玩家营地', campPosition.x + config.campSize.width / 2, campPosition.y - 10);
+            ctx.fillText('玩家营地', campPosition.x, campPosition.y - config.campRadius - 10);
             
             ctx.restore();
         }
@@ -281,18 +278,16 @@
             ctx.fillRect(0, canvas.height * 0.8, canvas.width, canvas.height * 0.2);
         }
 
-        // 检查碰撞
+        // 检查碰撞（圆形碰撞检测）
         function checkCollision(coalBall) {
-            // 检查是否在营地内
-            if (
-                coalBall.x > campPosition.x &&
-                coalBall.x < campPosition.x + config.campSize.width &&
-                coalBall.y > campPosition.y &&
-                coalBall.y < campPosition.y + config.campSize.height
-            ) {
-                return true;
-            }
-            return false;
+            // 计算煤球与营地中心的距离
+            const distance = Math.sqrt(
+                Math.pow(coalBall.x - campPosition.x, 2) + 
+                Math.pow(coalBall.y - campPosition.y, 2)
+            );
+            
+            // 检查是否在营地范围内
+            return distance <= config.campRadius;
         }
 
         // 更新游戏状态
@@ -315,13 +310,26 @@
             for (let i = gameState.coalBalls.length - 1; i >= 0; i--) {
                 const coalBall = gameState.coalBalls[i];
                 
-                // 移动煤球
-                coalBall.x += Math.cos(coalBall.angle) * coalBall.speed;
-                coalBall.y += Math.sin(coalBall.angle) * coalBall.speed;
-                
                 // 检查是否在营地内
                 const inCamp = checkCollision(coalBall);
-                if (inCamp) {
+                
+                // 如果煤球不在营地内，继续移动
+                if (!inCamp) {
+                    // 移动煤球
+                    coalBall.x += Math.cos(coalBall.angle) * coalBall.speed;
+                    coalBall.y += Math.sin(coalBall.angle) * coalBall.speed;
+                    coalBall.timeInCamp = 0;
+                } else {
+                    // 煤球进入营地
+                    if (!coalBall.inCamp) {
+                        // 第一次进入营地，扣分
+                        gameState.score = Math.max(0, gameState.score - config.scoreDecrease);
+                        coalBall.inCamp = true;
+                        coalBall.timeInCamp = 0;
+                        coalBall.lastHealthDecrease = currentTime;
+                    }
+                    
+                    // 增加停留时间
                     coalBall.timeInCamp += 16; // 假设60fps，每帧16ms
                     
                     // 每3秒减少生命值
@@ -330,8 +338,6 @@
                         gameState.health -= config.healthDecrease;
                         coalBall.lastHealthDecrease = currentTime;
                     }
-                } else {
-                    coalBall.timeInCamp = 0;
                 }
                 
                 // 检查是否飞出屏幕
