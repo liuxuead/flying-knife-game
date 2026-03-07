@@ -139,13 +139,17 @@
             const coalBall = {
                 x: x,
                 y: y,
+                lastX: x, // 上一帧位置
+                lastY: y,
                 targetX: targetX,
                 targetY: targetY,
                 speed: config.coalBallSpeed + Math.random() * 1, // 随机速度
                 angle: Math.atan2(targetY - y, targetX - x),
                 timeInCamp: 0,
                 lastHealthDecrease: 0,
-                inCamp: false // 标记是否在营地内
+                inCamp: false, // 标记是否在营地内
+                restricted: false, // 是否被限制在营地内
+                isBouncing: false // 是否正在弹飞
             };
 
             gameState.coalBalls.push(coalBall);
@@ -310,12 +314,20 @@
             for (let i = gameState.coalBalls.length - 1; i >= 0; i--) {
                 const coalBall = gameState.coalBalls[i];
                 
-                // 检查是否在营地内
-                const inCamp = checkCollision(coalBall);
+                // 检查上一帧是否在营地内
+                const wasInCamp = checkCollision({x: coalBall.lastX, y: coalBall.lastY});
                 
                 // 移动煤球
                 coalBall.x += Math.cos(coalBall.angle) * coalBall.speed;
                 coalBall.y += Math.sin(coalBall.angle) * coalBall.speed;
+                
+                // 检查当前帧是否在营地内
+                const inCamp = checkCollision(coalBall);
+                
+                // 如果煤球从外部进入营地（上一帧在外，当前帧在内），扣分
+                if (!wasInCamp && inCamp && !coalBall.isBouncing) {
+                    gameState.score = Math.max(0, gameState.score - config.scoreDecrease);
+                }
                 
                 // 如果煤球正在弹飞，检查是否已经飞出营地
                 if (coalBall.isBouncing && !inCamp) {
@@ -342,8 +354,6 @@
                 if (inCamp && !coalBall.isBouncing) {
                     // 煤球进入营地
                     if (!coalBall.inCamp) {
-                        // 第一次进入营地，立即扣分
-                        gameState.score = Math.max(0, gameState.score - config.scoreDecrease);
                         coalBall.inCamp = true;
                         coalBall.restricted = true; // 限制在营地内活动
                         coalBall.timeInCamp = 0;
@@ -366,6 +376,10 @@
                     coalBall.inCamp = false;
                     coalBall.restricted = false;
                 }
+                
+                // 更新上一帧位置
+                coalBall.lastX = coalBall.x;
+                coalBall.lastY = coalBall.y;
                 
                 // 检查是否飞出屏幕
                 if (
