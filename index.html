@@ -55,6 +55,18 @@
         .game-over button:hover {
             background: #45a049;
         }
+        .debug-info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            z-index: 50;
+            max-width: 200px;
+        }
     </style>
 </head>
 <body>
@@ -64,6 +76,7 @@
         <p>得分: <span id="finalScore">0</span></p>
         <button onclick="restartGame()">重新开始</button>
     </div>
+    <div class="debug-info" id="debugInfo">调试信息</div>
     <script>
         // 游戏状态
         const gameState = {
@@ -75,6 +88,17 @@
             spawnRate: 5000, // 煤球生成间隔（毫秒）- 测试用5秒
             lastSpawnTime: 0
         };
+
+        // 调试信息
+        let debugMessages = [];
+        
+        function addDebugMessage(message) {
+            debugMessages.push(message);
+            if (debugMessages.length > 5) {
+                debugMessages.shift();
+            }
+            document.getElementById('debugInfo').innerHTML = debugMessages.join('<br>');
+        }
 
         // 游戏配置
         const config = {
@@ -324,9 +348,20 @@
                 // 检查当前帧是否在营地内
                 const inCamp = checkCollision(coalBall);
                 
+                // 调试信息
+                if (!wasInCamp && inCamp && !coalBall.isBouncing) {
+                    addDebugMessage('煤球进入营地，准备扣分');
+                    addDebugMessage('上一帧位置: ' + coalBall.lastX.toFixed(1) + ', ' + coalBall.lastY.toFixed(1));
+                    addDebugMessage('当前帧位置: ' + coalBall.x.toFixed(1) + ', ' + coalBall.y.toFixed(1));
+                    addDebugMessage('营地中心: ' + campPosition.x.toFixed(1) + ', ' + campPosition.y.toFixed(1));
+                    addDebugMessage('营地半径: ' + config.campRadius);
+                }
+                
                 // 如果煤球从外部进入营地（上一帧在外，当前帧在内），扣分
                 if (!wasInCamp && inCamp && !coalBall.isBouncing) {
+                    addDebugMessage('执行扣分，当前得分: ' + gameState.score);
                     gameState.score = Math.max(0, gameState.score - config.scoreDecrease);
+                    addDebugMessage('扣分后得分: ' + gameState.score);
                 }
                 
                 // 如果煤球正在弹飞，检查是否已经飞出营地
