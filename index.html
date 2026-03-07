@@ -313,13 +313,11 @@
                 // 检查是否在营地内
                 const inCamp = checkCollision(coalBall);
                 
-                // 如果煤球不在营地内，继续移动
-                if (!inCamp) {
-                    // 移动煤球
-                    coalBall.x += Math.cos(coalBall.angle) * coalBall.speed;
-                    coalBall.y += Math.sin(coalBall.angle) * coalBall.speed;
-                    coalBall.timeInCamp = 0;
-                } else {
+                // 移动煤球（无论是否在营地内都可以移动，这样才能被弹飞）
+                coalBall.x += Math.cos(coalBall.angle) * coalBall.speed;
+                coalBall.y += Math.sin(coalBall.angle) * coalBall.speed;
+                
+                if (inCamp) {
                     // 煤球进入营地
                     if (!coalBall.inCamp) {
                         // 第一次进入营地，扣分
@@ -338,6 +336,9 @@
                         gameState.health -= config.healthDecrease;
                         coalBall.lastHealthDecrease = currentTime;
                     }
+                } else {
+                    coalBall.timeInCamp = 0;
+                    coalBall.inCamp = false;
                 }
                 
                 // 检查是否飞出屏幕
