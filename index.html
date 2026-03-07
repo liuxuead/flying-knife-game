@@ -313,9 +313,12 @@
                 // 检查是否在营地内
                 const inCamp = checkCollision(coalBall);
                 
-                // 移动煤球（无论是否在营地内都可以移动，这样才能被弹飞）
-                coalBall.x += Math.cos(coalBall.angle) * coalBall.speed;
-                coalBall.y += Math.sin(coalBall.angle) * coalBall.speed;
+                // 如果煤球在营地内且速度为0（被困住），则不移动
+                if (!inCamp || coalBall.speed > 0) {
+                    // 移动煤球
+                    coalBall.x += Math.cos(coalBall.angle) * coalBall.speed;
+                    coalBall.y += Math.sin(coalBall.angle) * coalBall.speed;
+                }
                 
                 if (inCamp) {
                     // 煤球进入营地
@@ -325,6 +328,8 @@
                         coalBall.inCamp = true;
                         coalBall.timeInCamp = 0;
                         coalBall.lastHealthDecrease = currentTime;
+                        // 困住煤球（速度设为0）
+                        coalBall.speed = 0;
                     }
                     
                     // 增加停留时间
