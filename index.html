@@ -473,7 +473,11 @@
                             
                             if (distanceToLine < config.coalBallSize + 20) {
                                 // 计算反弹方向（按照手指滑动的方向）
-                                const angle = Math.atan2(deltaY, deltaX);
+                                // 这里使用从煤球到滑动终点的方向，这样更符合弹飞的感觉
+                                const rect = canvas.getBoundingClientRect();
+                                const coalScreenX = coalBall.x + rect.left;
+                                const coalScreenY = coalBall.y + rect.top;
+                                const angle = Math.atan2(touchEndY - coalScreenY, touchEndX - coalScreenX);
                                 
                                 // 设置新的目标位置（屏幕外）
                                 const bounceDistance = 200;
