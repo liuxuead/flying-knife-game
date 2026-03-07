@@ -103,9 +103,9 @@
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            // 营地位置：屏幕中间偏下
+            // 营地位置：屏幕中间
             campPosition.x = canvas.width / 2 - config.campSize.width / 2;
-            campPosition.y = canvas.height * 0.7;
+            campPosition.y = canvas.height / 2 - config.campSize.height / 2;
         }
 
         // 生成煤球
@@ -279,20 +279,6 @@
             // 绘制简单的草地
             ctx.fillStyle = '#228B22';
             ctx.fillRect(0, canvas.height * 0.8, canvas.width, canvas.height * 0.2);
-            
-            // 绘制云朵
-            for (let i = 0; i < 5; i++) {
-                const cloudX = Math.random() * canvas.width;
-                const cloudY = Math.random() * canvas.height * 0.3;
-                
-                ctx.beginPath();
-                ctx.arc(cloudX, cloudY, 30, 0, Math.PI * 2);
-                ctx.arc(cloudX + 30, cloudY, 25, 0, Math.PI * 2);
-                ctx.arc(cloudX + 60, cloudY, 30, 0, Math.PI * 2);
-                ctx.arc(cloudX + 30, cloudY - 15, 20, 0, Math.PI * 2);
-                ctx.fillStyle = 'white';
-                ctx.fill();
-            }
         }
 
         // 检查碰撞
@@ -434,6 +420,13 @@
             document.getElementById('gameOver').style.display = 'none';
         }
 
+        // 触摸滑动状态
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
+        let touchStartTime = 0;
+
         // 初始化
         function init() {
             resizeCanvas();
@@ -443,7 +436,69 @@
             canvas.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 const touch = e.touches[0];
-                bounceCoalBall(touch.clientX, touch.clientY);
+                touchStartX = touch.clientX;
+                touchStartY = touch.clientY;
+                touchStartTime = Date.now();
+            });
+            
+            canvas.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                if (e.changedTouches.length > 0) {
+                    const touch = e.changedTouches[0];
+                    touchEndX = touch.clientX;
+                    touchEndY = touch.clientY;
+                    const touchDuration = Date.now() - touchStartTime;
+                    
+                    // 计算滑动距离和速度
+                    const deltaX = touchEndX - touchStartX;
+                    const deltaY = touchEndY - touchStartY;
+                    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                    const speed = distance / touchDuration;
+                    
+                    // 如果是快速滑动，弹飞煤球
+                    if (distance > 30 && speed > 0.5) {
+                        // 找到滑动路径上的煤球
+                        gameState.coalBalls.forEach(coalBall => {
+                            // 检查煤球是否在滑动路径附近
+                            const rect = canvas.getBoundingClientRect();
+                            const coalX = coalBall.x + rect.left;
+                            const coalY = coalBall.y + rect.top;
+                            
+                            // 计算点到线段的距离
+                            const distanceToLine = distanceToSegment(
+                                coalX, coalY, 
+                                touchStartX, touchStartY, 
+                                touchEndX, touchEndY
+                            );
+                            
+                            if (distanceToLine < config.coalBallSize + 20) {
+                                // 计算反弹方向（与滑动方向相反）
+                                const angle = Math.atan2(deltaY, deltaX) + Math.PI;
+                                
+                                // 设置新的目标位置（屏幕外）
+                                const bounceDistance = 200;
+                                coalBall.targetX = coalBall.x + Math.cos(angle) * bounceDistance;
+                                coalBall.targetY = coalBall.y + Math.sin(angle) * bounceDistance;
+                                coalBall.angle = angle;
+                                coalBall.speed = 8; // 弹开速度
+                                
+                                // 增加得分
+                                gameState.score += 10;
+                                
+                                // 检查是否升级
+                                if (gameState.score % 100 === 0) {
+                                    gameState.level++;
+                                }
+                            }
+                        });
+                    } else {
+                        // 普通点击
+                        const rect = canvas.getBoundingClientRect();
+                        const x = touchEndX - rect.left;
+                        const y = touchEndY - rect.top;
+                        bounceCoalBall(x, y);
+                    }
+                }
             });
             
             // 鼠标事件（用于调试）
@@ -455,6 +510,39 @@
             });
             
             gameLoop();
+        }
+        
+        // 计算点到线段的距离
+        function distanceToSegment(px, py, x1, y1, x2, y2) {
+            const A = px - x1;
+            const B = py - y1;
+            const C = x2 - x1;
+            const D = y2 - y1;
+            
+            const dot = A * C + B * D;
+            const lenSq = C * C + D * D;
+            let param = -1;
+            
+            if (lenSq !== 0) {
+                param = dot / lenSq;
+            }
+            
+            let xx, yy;
+            
+            if (param < 0) {
+                xx = x1;
+                yy = y1;
+            } else if (param > 1) {
+                xx = x2;
+                yy = y2;
+            } else {
+                xx = x1 + param * C;
+                yy = y1 + param * D;
+            }
+            
+            const dx = px - xx;
+            const dy = py - yy;
+            return Math.sqrt(dx * dx + dy * dy);
         }
 
         // 启动游戏
