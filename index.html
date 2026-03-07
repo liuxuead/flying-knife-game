@@ -317,8 +317,13 @@
                 coalBall.x += Math.cos(coalBall.angle) * coalBall.speed;
                 coalBall.y += Math.sin(coalBall.angle) * coalBall.speed;
                 
-                // 如果煤球在营地内，限制其在营地范围内移动
-                if (inCamp && coalBall.restricted) {
+                // 如果煤球正在弹飞，检查是否已经飞出营地
+                if (coalBall.isBouncing && !inCamp) {
+                    coalBall.isBouncing = false; // 弹飞完成
+                }
+                
+                // 如果煤球在营地内且不是正在弹飞，限制其在营地范围内移动
+                if (inCamp && coalBall.restricted && !coalBall.isBouncing) {
                     const distanceFromCenter = Math.sqrt(
                         Math.pow(coalBall.x - campPosition.x, 2) + 
                         Math.pow(coalBall.y - campPosition.y, 2)
@@ -334,7 +339,7 @@
                     }
                 }
                 
-                if (inCamp) {
+                if (inCamp && !coalBall.isBouncing) {
                     // 煤球进入营地
                     if (!coalBall.inCamp) {
                         // 第一次进入营地，立即扣分
@@ -402,10 +407,8 @@
                     coalBall.angle = angle;
                     coalBall.speed = 5; // 弹开速度
                     
-                    // 解除营地限制（如果之前在营地内）
-                    coalBall.restricted = false;
-                    coalBall.inCamp = false;
-                    coalBall.timeInCamp = 0;
+                    // 设置正在弹飞标志
+                    coalBall.isBouncing = true;
                     
                     // 增加得分
                     gameState.score += 10;
@@ -519,10 +522,8 @@
                                 coalBall.angle = angle;
                                 coalBall.speed = 8; // 弹开速度
                                 
-                                // 解除营地限制（如果之前在营地内）
-                                coalBall.restricted = false;
-                                coalBall.inCamp = false;
-                                coalBall.timeInCamp = 0;
+                                // 设置正在弹飞标志
+                                coalBall.isBouncing = true;
                                 
                                 // 增加得分
                                 gameState.score += 10;
