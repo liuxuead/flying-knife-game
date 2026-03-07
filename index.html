@@ -521,7 +521,7 @@
                     const speed = distance / touchDuration;
                     
                     // 如果是快速滑动，弹飞煤球
-                    if (distance > 30 && speed > 0.5) {
+                    if (distance > 20 && speed > 0.3) {
                         // 找到滑动路径上的煤球
                         gameState.coalBalls.forEach(coalBall => {
                             // 检查煤球是否在滑动路径附近
@@ -536,7 +536,7 @@
                                 touchEndX, touchEndY
                             );
                             
-                            if (distanceToLine < config.coalBallSize + 20) {
+                            if (distanceToLine < config.coalBallSize + 25) {
                                 // 计算反弹方向（按照手指滑动的方向）
                                 // 这里使用从煤球到滑动终点的方向，这样更符合弹飞的感觉
                                 const rect = canvas.getBoundingClientRect();
