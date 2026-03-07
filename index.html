@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>飞刀投掷游戏</title>
+    <title>进击的煤球</title>
     <style>
         * {
             margin: 0;
@@ -14,473 +14,447 @@
             width: 100vw;
             height: 100vh;
             overflow: hidden;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #f0f0f0;
+            font-family: Arial, sans-serif;
         }
         canvas {
             display: block;
             width: 100%;
             height: 100%;
         }
-        .instructions {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 10px;
-            font-family: Arial, sans-serif;
-            font-size: 14px;
-            text-align: center;
-            z-index: 10;
-        }
-        #startBtn {
+        .game-over {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            padding: 20px 40px;
-            font-size: 24px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 100;
+            display: none;
+        }
+        .game-over h2 {
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+        .game-over p {
+            font-size: 20px;
+            margin-bottom: 30px;
+        }
+        .game-over button {
+            padding: 15px 30px;
+            font-size: 18px;
+            background: #4CAF50;
             color: white;
             border: none;
             border-radius: 10px;
             cursor: pointer;
-            z-index: 20;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
-        #startBtn:active {
-            transform: translate(-50%, -50%) scale(0.95);
+        .game-over button:hover {
+            background: #45a049;
         }
     </style>
 </head>
 <body>
-    <div class="instructions">
-        手指左右滑动旋转飞刀，速度越快动力越大<br>
-        手指快速向上滑动发射飞刀<br>
-        击中靶子得分
-    </div>
-    <button id="startBtn">开始游戏</button>
     <canvas id="gameCanvas"></canvas>
+    <div class="game-over" id="gameOver">
+        <h2>游戏结束</h2>
+        <p>得分: <span id="finalScore">0</span></p>
+        <button onclick="restartGame()">重新开始</button>
+    </div>
     <script>
         // 游戏状态
         const gameState = {
-            rotationSpeed: 0,
-            rotationDirection: 0,
-            knifeAngle: 0,
-            knifeSpeed: 0,
-            isFlying: false,
-            targetPosition: { x: 0, y: 0 },
             score: 0,
+            health: 100,
+            gameOver: false,
+            coalBalls: [],
             level: 1,
-            isRotating: false,
-            isTouching: false
+            spawnRate: 1000, // 煤球生成间隔（毫秒）
+            lastSpawnTime: 0
         };
 
         // 游戏配置
         const config = {
-            palmSize: 0.3,
-            mistColor: 'rgba(173, 216, 230, 0.5)',
-            mistShape: 'yin-yang',
-            knifeLength: 200,
-            knifeWidth: 10,
-            targetSize: 50
+            campSize: {
+                width: 120,
+                height: 80
+            },
+            coalBallSize: 30, // 煤球大小（半径）
+            coalBallSpeed: 2, // 煤球移动速度
+            coalBallMaxTime: 3000, // 煤球最大停留时间（毫秒）
+            healthDecrease: 10, // 每次减少的生命值
+            healthDecreaseInterval: 1000 // 生命值减少间隔（毫秒）
         };
-
-        // 图片资源
-        const images = {
-            knife: null,
-            palm: null,
-            mist: null,
-            target: null,
-            loaded: 0,
-            total: 4
-        };
-
-        // 加载图片
-        function loadImages() {
-            const imageFiles = [
-                { name: 'knife', src: 'knife.png' },
-                { name: 'palm', src: 'palm.png' },
-                { name: 'mist', src: 'mist.png' },
-                { name: 'target', src: 'target.png' }
-            ];
-
-            imageFiles.forEach((imageInfo) => {
-                const img = new Image();
-                img.src = imageInfo.src;
-                img.onload = () => {
-                    images[imageInfo.name] = img;
-                    images.loaded++;
-                    console.log(`已加载: ${imageInfo.src}`);
-                    if (images.loaded === images.total) {
-                        console.log('所有图片加载完成');
-                    }
-                };
-                img.onerror = () => {
-                    console.error(`加载失败: ${imageInfo.src}`);
-                    images.loaded++;
-                };
-            });
-        }
 
         // 获取Canvas元素
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
+        // 营地位置
+        let campPosition = {
+            x: 0,
+            y: 0
+        };
+
         // 设置Canvas尺寸
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            gameState.targetPosition = {
-                x: canvas.width / 2,
-                y: canvas.height * 0.2
+            // 营地位置：屏幕中间偏下
+            campPosition.x = canvas.width / 2 - config.campSize.width / 2;
+            campPosition.y = canvas.height * 0.7;
+        }
+
+        // 生成煤球
+        function spawnCoalBall() {
+            // 随机边缘位置
+            const edge = Math.floor(Math.random() * 4); // 0: 上, 1: 右, 2: 下, 3: 左
+            let x, y;
+            
+            switch(edge) {
+                case 0: // 上
+                    x = Math.random() * canvas.width;
+                    y = -config.coalBallSize * 2;
+                    break;
+                case 1: // 右
+                    x = canvas.width + config.coalBallSize * 2;
+                    y = Math.random() * canvas.height;
+                    break;
+                case 2: // 下
+                    x = Math.random() * canvas.width;
+                    y = canvas.height + config.coalBallSize * 2;
+                    break;
+                case 3: // 左
+                    x = -config.coalBallSize * 2;
+                    y = Math.random() * canvas.height;
+                    break;
+            }
+
+            // 目标位置：营地区域内随机点
+            const targetX = campPosition.x + Math.random() * config.campSize.width;
+            const targetY = campPosition.y + Math.random() * config.campSize.height;
+
+            // 创建煤球
+            const coalBall = {
+                x: x,
+                y: y,
+                targetX: targetX,
+                targetY: targetY,
+                speed: config.coalBallSpeed + Math.random() * 1, // 随机速度
+                angle: Math.atan2(targetY - y, targetX - x),
+                timeInCamp: 0,
+                lastHealthDecrease: 0
             };
+
+            gameState.coalBalls.push(coalBall);
         }
 
-        // 初始化
-        function init() {
-            resizeCanvas();
-            window.addEventListener('resize', resizeCanvas);
-            loadImages();
+        // 绘制煤球
+        function drawCoalBall(coalBall) {
+            ctx.save();
             
-            const startBtn = document.getElementById('startBtn');
-            startBtn.addEventListener('click', () => {
-                console.log('开始游戏');
-                startBtn.style.display = 'none';
-                setupTouchControls();
-            });
-
-            gameLoop();
-        }
-        
-        // 触摸控制
-        function setupTouchControls() {
-            let touchStartX = 0;
-            let touchStartY = 0;
-            let touchStartTime = 0;
-            let isTouching = false;
-            let lastTouchX = 0;
-            let touchHistory = [];
+            // 绘制煤球主体
+            ctx.beginPath();
+            ctx.arc(coalBall.x, coalBall.y, config.coalBallSize, 0, Math.PI * 2);
+            ctx.fillStyle = '#333';
+            ctx.fill();
             
-            canvas.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                const touch = e.touches[0];
-                touchStartX = touch.clientX;
-                touchStartY = touch.clientY;
-                lastTouchX = touch.clientX;
-                touchStartTime = Date.now();
-                isTouching = true;
-                gameState.isTouching = true;
-                touchHistory = [];
+            // 绘制绒毛
+            for (let i = 0; i < 12; i++) {
+                const angle = (Math.PI * 2 / 12) * i;
+                const x = coalBall.x + Math.cos(angle) * (config.coalBallSize + 5);
+                const y = coalBall.y + Math.sin(angle) * (config.coalBallSize + 5);
                 
-                console.log('触摸开始:', touchStartX, touchStartY);
-            }, { passive: false });
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, Math.PI * 2);
+                ctx.fillStyle = '#555';
+                ctx.fill();
+            }
             
-            canvas.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-                if (!isTouching) return;
-                
-                const touch = e.touches[0];
-                const currentX = touch.clientX;
-                const currentY = touch.clientY;
-                const deltaX = currentX - lastTouchX;
-                
-                touchHistory.push({
-                    x: currentX,
-                    y: currentY,
-                    time: Date.now()
-                });
-                if (touchHistory.length > 10) {
-                    touchHistory.shift();
-                }
-                
-                const slideSpeed = Math.abs(deltaX);
-                gameState.rotationSpeed = Math.min(slideSpeed * 3, 100);
-                gameState.rotationDirection = deltaX > 0 ? 1 : -1;
-                gameState.isRotating = gameState.rotationSpeed > 1;
-                
-                if (!gameState.isFlying) {
-                    gameState.knifeAngle += deltaX * 0.02;
-                }
-                
-                lastTouchX = currentX;
-                
-                console.log('触摸移动: deltaX=' + deltaX + ' 旋转速度=' + gameState.rotationSpeed);
-            }, { passive: false });
+            // 绘制眼睛
+            ctx.beginPath();
+            ctx.arc(coalBall.x - 8, coalBall.y - 5, 4, 0, Math.PI * 2);
+            ctx.fillStyle = 'white';
+            ctx.fill();
             
-            canvas.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                if (!isTouching) return;
-                
-                isTouching = false;
-                gameState.isTouching = false;
-                const touchEndTime = Date.now();
-                const touchDuration = touchEndTime - touchStartTime;
-                
-                if (touchHistory.length >= 2 && !gameState.isFlying) {
-                    const startPoint = touchHistory[0];
-                    const endPoint = touchHistory[touchHistory.length - 1];
-                    const totalDeltaY = endPoint.y - startPoint.y;
-                    const totalDeltaX = endPoint.x - startPoint.x;
-                    const slideDuration = endPoint.time - startPoint.time;
-                    
-                    const upwardSpeed = Math.abs(totalDeltaY) / Math.max(slideDuration, 1);
-                    
-                    console.log('检测发射: 向上距离=' + totalDeltaY + ' 速度=' + upwardSpeed.toFixed(2) + ' 旋转速度=' + gameState.rotationSpeed.toFixed(2));
-                    
-                    if (totalDeltaY < -30 && 
-                        gameState.rotationSpeed > 3 && 
-                        upwardSpeed > 0.3 &&
-                        Math.abs(totalDeltaX) < Math.abs(totalDeltaY) * 0.8) {
-                        console.log('✓ 发射飞刀！');
-                        launchKnife();
-                    }
-                }
-                
-                const slowDown = () => {
-                    if (!isTouching && gameState.rotationSpeed > 0 && !gameState.isFlying) {
-                        gameState.rotationSpeed *= 0.95;
-                        if (gameState.rotationSpeed < 0.5) {
-                            gameState.rotationSpeed = 0;
-                            gameState.isRotating = false;
-                        } else {
-                            gameState.knifeAngle += gameState.rotationSpeed * 0.015 * gameState.rotationDirection;
-                            requestAnimationFrame(slowDown);
-                        }
-                    }
-                };
-                slowDown();
-                
-                console.log('触摸结束: 持续时间=' + touchDuration + 'ms 最终旋转速度=' + gameState.rotationSpeed);
-            }, { passive: false });
+            ctx.beginPath();
+            ctx.arc(coalBall.x + 8, coalBall.y - 5, 4, 0, Math.PI * 2);
+            ctx.fillStyle = 'white';
+            ctx.fill();
             
-            console.log('触摸控制已启用');
+            // 绘制眼球
+            ctx.beginPath();
+            ctx.arc(coalBall.x - 8, coalBall.y - 5, 2, 0, Math.PI * 2);
+            ctx.fillStyle = 'black';
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(coalBall.x + 8, coalBall.y - 5, 2, 0, Math.PI * 2);
+            ctx.fillStyle = 'black';
+            ctx.fill();
+            
+            // 绘制嘴巴
+            ctx.beginPath();
+            ctx.arc(coalBall.x, coalBall.y + 5, 5, 0, Math.PI);
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            ctx.restore();
         }
 
-        // 发射飞刀
-        function launchKnife() {
-            gameState.isFlying = true;
-            gameState.knifeSpeed = gameState.rotationSpeed * 0.3;
+        // 绘制营地
+        function drawCamp() {
+            ctx.save();
+            
+            // 绘制营地主体
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(campPosition.x, campPosition.y, config.campSize.width, config.campSize.height);
+            
+            // 绘制营地边框
+            ctx.strokeStyle = '#5D2F0A';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(campPosition.x, campPosition.y, config.campSize.width, config.campSize.height);
+            
+            // 绘制营地门
+            const doorWidth = 40;
+            const doorHeight = 60;
+            ctx.fillStyle = '#333';
+            ctx.fillRect(
+                campPosition.x + (config.campSize.width - doorWidth) / 2,
+                campPosition.y + config.campSize.height - doorHeight,
+                doorWidth,
+                doorHeight
+            );
+            
+            // 绘制营地名
+            ctx.fillStyle = 'white';
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('玩家营地', campPosition.x + config.campSize.width / 2, campPosition.y - 10);
+            
+            ctx.restore();
         }
 
-        // 重置游戏状态
-        function resetGameState() {
-            gameState.isFlying = false;
-            gameState.knifeSpeed = 0;
-            gameState.rotationSpeed = 0;
-            gameState.rotationDirection = 0;
-            gameState.knifeAngle = 0;
-            gameState.isRotating = false;
-            gameState.isTouching = false;
+        // 绘制生命值和得分
+        function drawHUD() {
+            ctx.save();
+            
+            // 绘制生命值条
+            ctx.fillStyle = '#4CAF50';
+            ctx.fillRect(20, 20, 200, 20);
+            
+            // 绘制生命值
+            const healthWidth = (gameState.health / 100) * 200;
+            ctx.fillStyle = '#f44336';
+            ctx.fillRect(20, 20, healthWidth, 20);
+            
+            // 绘制生命值文字
+            ctx.fillStyle = 'black';
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText('生命值: ' + gameState.health, 230, 35);
+            
+            // 绘制得分
+            ctx.fillText('得分: ' + gameState.score, 20, 70);
+            
+            // 绘制等级
+            ctx.fillText('等级: ' + gameState.level, 20, 100);
+            
+            ctx.restore();
         }
 
-        // 绘制手掌（已禁用）
-        function drawPalm() {
-            // 不绘制手掌
-        }
-
-        // 绘制雾气
-        function drawMist() {
-            const mistHeight = canvas.height * config.palmSize * 0.8;
-            const mistX = canvas.width / 2;
-            const mistY = canvas.height - canvas.height * config.palmSize - mistHeight / 2;
-
-            if (images.mist) {
-                const mistWidth = mistHeight * (images.mist.width / images.mist.height);
-                ctx.globalAlpha = 0.8;
-                ctx.drawImage(images.mist, mistX - mistWidth / 2, mistY - mistHeight / 2, mistWidth, mistHeight);
-                ctx.globalAlpha = 1;
-            } else {
-                // 备用绘制
-                ctx.save();
-                ctx.globalAlpha = 0.5;
-                const mistWidth = mistHeight * 1.2;
+        // 绘制背景
+        function drawBackground() {
+            // 渐变背景
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(1, '#98FB98');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制简单的草地
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(0, canvas.height * 0.8, canvas.width, canvas.height * 0.2);
+            
+            // 绘制云朵
+            for (let i = 0; i < 5; i++) {
+                const cloudX = Math.random() * canvas.width;
+                const cloudY = Math.random() * canvas.height * 0.3;
                 
-                if (config.mistShape === 'yin-yang') {
-                    ctx.beginPath();
-                    ctx.arc(mistX, mistY, mistWidth / 2, 0, Math.PI * 2);
-                    ctx.fillStyle = config.mistColor;
-                    ctx.fill();
-
-                    ctx.beginPath();
-                    ctx.arc(mistX - mistWidth * 0.2, mistY, mistWidth * 0.1, 0, Math.PI * 2);
-                    ctx.fillStyle = 'rgba(255,255,255, 0.8)';
-                    ctx.fill();
-
-                    ctx.beginPath();
-                    ctx.arc(mistX + mistWidth * 0.2, mistY, mistWidth * 0.1, 0, Math.PI * 2);
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-                    ctx.fill();
-                } else {
-                    ctx.beginPath();
-                    ctx.arc(mistX, mistY, mistWidth / 2, 0, Math.PI * 2);
-                    ctx.fillStyle = config.mistColor;
-                    ctx.fill();
-                }
-
-                ctx.restore();
+                ctx.beginPath();
+                ctx.arc(cloudX, cloudY, 30, 0, Math.PI * 2);
+                ctx.arc(cloudX + 30, cloudY, 25, 0, Math.PI * 2);
+                ctx.arc(cloudX + 60, cloudY, 30, 0, Math.PI * 2);
+                ctx.arc(cloudX + 30, cloudY - 15, 20, 0, Math.PI * 2);
+                ctx.fillStyle = 'white';
+                ctx.fill();
             }
         }
 
-        // 绘制飞刀
-        function drawKnife() {
-            let knifeX, knifeY;
-            
-            if (gameState.isFlying) {
-                const startY = canvas.height - canvas.height * config.palmSize - canvas.height * config.palmSize * 0.4;
-                const flightDistance = gameState.knifeSpeed * 10;
-                knifeX = canvas.width / 2;
-                knifeY = startY - flightDistance;
-            } else {
-                const mistHeight = canvas.height * config.palmSize * 0.8;
-                knifeX = canvas.width / 2;
-                knifeY = canvas.height - canvas.height * config.palmSize - mistHeight / 2;
+        // 检查碰撞
+        function checkCollision(coalBall) {
+            // 检查是否在营地内
+            if (
+                coalBall.x > campPosition.x &&
+                coalBall.x < campPosition.x + config.campSize.width &&
+                coalBall.y > campPosition.y &&
+                coalBall.y < campPosition.y + config.campSize.height
+            ) {
+                return true;
             }
-
-            if (images.knife) {
-                const knifeWidth = canvas.height * 0.15;
-                const knifeHeight = knifeWidth * (images.knife.height / images.knife.width);
-                
-                ctx.save();
-                ctx.translate(knifeX, knifeY);
-                ctx.rotate(gameState.knifeAngle);
-                ctx.drawImage(images.knife, -knifeWidth / 2, -knifeHeight / 2, knifeWidth, knifeHeight);
-                ctx.restore();
-            } else {
-                // 备用绘制
-                ctx.save();
-                ctx.translate(knifeX, knifeY);
-                ctx.rotate(gameState.knifeAngle);
-
-                ctx.beginPath();
-                ctx.rect(-config.knifeWidth * 1.2, -config.knifeWidth * 2, config.knifeWidth * 2.4, config.knifeWidth * 4);
-                ctx.fillStyle = '#8b4513';
-                ctx.fill();
-                ctx.strokeStyle = '#5d2f0a';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-
-                ctx.beginPath();
-                ctx.moveTo(-config.knifeWidth * 1.2, 0);
-                ctx.lineTo(-config.knifeLength / 2, -config.knifeWidth / 2);
-                ctx.lineTo(-config.knifeLength / 2, config.knifeWidth / 2);
-                ctx.closePath();
-                ctx.fillStyle = '#c0392b';
-                ctx.fill();
-                ctx.strokeStyle = '#8b0000';
-                ctx.stroke();
-
-                ctx.beginPath();
-                ctx.moveTo(config.knifeWidth * 1.2, 0);
-                ctx.lineTo(config.knifeLength / 2, -config.knifeWidth / 2);
-                ctx.lineTo(config.knifeLength / 2, config.knifeWidth / 2);
-                ctx.closePath();
-                ctx.fillStyle = '#c0392b';
-                ctx.fill();
-                ctx.strokeStyle = '#8b0000';
-                ctx.stroke();
-
-                ctx.restore();
-            }
-        }
-
-        // 绘制靶子
-        function drawTarget() {
-            const target = gameState.targetPosition;
-
-            if (images.target) {
-                const targetSize = canvas.height * 0.1;
-                const targetWidth = targetSize;
-                const targetHeight = targetSize * (images.target.height / images.target.width);
-                ctx.drawImage(images.target, target.x - targetWidth / 2, target.y - targetHeight / 2, targetWidth, targetHeight);
-            } else {
-                // 备用绘制
-                const size = config.targetSize;
-
-                ctx.beginPath();
-                ctx.arc(target.x, target.y, size, 0, Math.PI * 2);
-                ctx.fillStyle = '#e74c3c';
-                ctx.fill();
-                ctx.strokeStyle = '#c0392b';
-                ctx.lineWidth = 4;
-                ctx.stroke();
-
-                ctx.beginPath();
-                ctx.arc(target.x, target.y, size * 0.7, 0, Math.PI * 2);
-                ctx.fillStyle = '#f39c12';
-                ctx.fill();
-                ctx.strokeStyle = '#d35400';
-                ctx.stroke();
-
-                ctx.beginPath();
-                ctx.arc(target.x, target.y, size * 0.4, 0, Math.PI * 2);
-                ctx.fillStyle = '#27ae60';
-                ctx.fill();
-                ctx.strokeStyle = '#229954';
-                ctx.stroke();
-
-                ctx.beginPath();
-                ctx.arc(target.x, target.y, size * 0.15, 0, Math.PI * 2);
-                ctx.fillStyle = '#3498db';
-                ctx.fill();
-                ctx.strokeStyle = '#2980b9';
-                ctx.stroke();
-            }
+            return false;
         }
 
         // 更新游戏状态
         function update() {
-            if (!gameState.isFlying) {
-                if (gameState.rotationSpeed > 0.1 && !gameState.isTouching) {
-                    gameState.knifeAngle += gameState.rotationSpeed * 0.01 * gameState.rotationDirection;
+            if (gameState.gameOver) return;
+            
+            // 生成煤球
+            const currentTime = Date.now();
+            if (currentTime - gameState.lastSpawnTime > gameState.spawnRate) {
+                spawnCoalBall();
+                gameState.lastSpawnTime = currentTime;
+                
+                // 随着等级提高，减少生成间隔
+                if (gameState.level > 1) {
+                    gameState.spawnRate = Math.max(500, 1000 - (gameState.level - 1) * 100);
                 }
-            } else {
-                gameState.knifeSpeed += 0.5;
+            }
+            
+            // 更新煤球
+            for (let i = gameState.coalBalls.length - 1; i >= 0; i--) {
+                const coalBall = gameState.coalBalls[i];
                 
-                const startY = canvas.height - canvas.height * config.palmSize - canvas.height * config.palmSize * 0.4;
-                const flightDistance = gameState.knifeSpeed * 10;
-                const knifeX = canvas.width / 2;
-                const knifeY = startY - flightDistance;
+                // 移动煤球
+                coalBall.x += Math.cos(coalBall.angle) * coalBall.speed;
+                coalBall.y += Math.sin(coalBall.angle) * coalBall.speed;
+                
+                // 检查是否在营地内
+                const inCamp = checkCollision(coalBall);
+                if (inCamp) {
+                    coalBall.timeInCamp += 16; // 假设60fps，每帧16ms
+                    
+                    // 每3秒减少生命值
+                    if (coalBall.timeInCamp >= 3000 && 
+                        currentTime - coalBall.lastHealthDecrease > config.healthDecreaseInterval) {
+                        gameState.health -= config.healthDecrease;
+                        coalBall.lastHealthDecrease = currentTime;
+                    }
+                } else {
+                    coalBall.timeInCamp = 0;
+                }
+                
+                // 检查是否飞出屏幕
+                if (
+                    coalBall.x < -config.coalBallSize * 2 ||
+                    coalBall.x > canvas.width + config.coalBallSize * 2 ||
+                    coalBall.y < -config.coalBallSize * 2 ||
+                    coalBall.y > canvas.height + config.coalBallSize * 2
+                ) {
+                    gameState.coalBalls.splice(i, 1);
+                }
+            }
+            
+            // 检查游戏结束
+            if (gameState.health <= 0) {
+                gameState.gameOver = true;
+                document.getElementById('finalScore').textContent = gameState.score;
+                document.getElementById('gameOver').style.display = 'block';
+            }
+        }
 
-                const target = gameState.targetPosition;
-                const distance = Math.sqrt(Math.pow(knifeX - target.x, 2) + Math.pow(knifeY - target.y, 2));
+        // 弹开煤球
+        function bounceCoalBall(x, y) {
+            for (let i = gameState.coalBalls.length - 1; i >= 0; i--) {
+                const coalBall = gameState.coalBalls[i];
                 
-                if (distance < canvas.height * 0.05) {
+                // 计算点击位置与煤球的距离
+                const distance = Math.sqrt(
+                    Math.pow(x - coalBall.x, 2) + Math.pow(y - coalBall.y, 2)
+                );
+                
+                if (distance <= config.coalBallSize + 10) {
+                    // 计算反弹方向（远离点击位置）
+                    const angle = Math.atan2(coalBall.y - y, coalBall.x - x);
+                    
+                    // 设置新的目标位置（屏幕外）
+                    const bounceDistance = 200;
+                    coalBall.targetX = coalBall.x + Math.cos(angle) * bounceDistance;
+                    coalBall.targetY = coalBall.y + Math.sin(angle) * bounceDistance;
+                    coalBall.angle = angle;
+                    coalBall.speed = 5; // 弹开速度
+                    
+                    // 增加得分
                     gameState.score += 10;
-                    resetGameState();
-                    // 靶子位置固定在屏幕上半部分，y坐标在 5%-25% 之间
-                    gameState.targetPosition = {
-                        x: Math.random() * (canvas.width - canvas.height * 0.1) + canvas.height * 0.05,
-                        y: Math.random() * (canvas.height * 0.2) + canvas.height * 0.05
-                    };
-                    if (gameState.score % 50 === 0) {
+                    
+                    // 检查是否升级
+                    if (gameState.score % 100 === 0) {
                         gameState.level++;
                     }
-                } else if (knifeY < 0 || knifeX < 0 || knifeX > canvas.width) {
-                    resetGameState();
+                    
+                    break;
                 }
             }
         }
 
         // 游戏主循环
         function gameLoop() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            gradient.addColorStop(0, '#667eea');
-            gradient.addColorStop(1, '#764ba2');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            drawTarget();
-            drawPalm();
-            drawMist();
-            drawKnife();
+            // 绘制背景
+            drawBackground();
+            
+            // 绘制营地
+            drawCamp();
+            
+            // 绘制煤球
+            gameState.coalBalls.forEach(drawCoalBall);
+            
+            // 绘制HUD
+            drawHUD();
+            
+            // 更新游戏状态
             update();
-
+            
             requestAnimationFrame(gameLoop);
+        }
+
+        // 重新开始游戏
+        function restartGame() {
+            gameState.score = 0;
+            gameState.health = 100;
+            gameState.gameOver = false;
+            gameState.coalBalls = [];
+            gameState.level = 1;
+            gameState.spawnRate = 1000;
+            gameState.lastSpawnTime = 0;
+            
+            document.getElementById('gameOver').style.display = 'none';
+        }
+
+        // 初始化
+        function init() {
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // 触摸事件
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                bounceCoalBall(touch.clientX, touch.clientY);
+            });
+            
+            // 鼠标事件（用于调试）
+            canvas.addEventListener('click', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                bounceCoalBall(x, y);
+            });
+            
+            gameLoop();
         }
 
         // 启动游戏
