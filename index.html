@@ -313,11 +313,25 @@
                 // 检查是否在营地内
                 const inCamp = checkCollision(coalBall);
                 
-                // 如果煤球在营地内且速度为0（被困住），则不移动
-                if (!inCamp || coalBall.speed > 0) {
-                    // 移动煤球
-                    coalBall.x += Math.cos(coalBall.angle) * coalBall.speed;
-                    coalBall.y += Math.sin(coalBall.angle) * coalBall.speed;
+                // 移动煤球
+                coalBall.x += Math.cos(coalBall.angle) * coalBall.speed;
+                coalBall.y += Math.sin(coalBall.angle) * coalBall.speed;
+                
+                // 如果煤球在营地内，限制其在营地范围内移动
+                if (inCamp && coalBall.restricted) {
+                    const distanceFromCenter = Math.sqrt(
+                        Math.pow(coalBall.x - campPosition.x, 2) + 
+                        Math.pow(coalBall.y - campPosition.y, 2)
+                    );
+                    
+                    // 如果超出营地范围，将其拉回边界内
+                    if (distanceFromCenter > config.campRadius - config.coalBallSize) {
+                        const angle = Math.atan2(coalBall.y - campPosition.y, coalBall.x - campPosition.x);
+                        coalBall.x = campPosition.x + Math.cos(angle) * (config.campRadius - config.coalBallSize);
+                        coalBall.y = campPosition.y + Math.sin(angle) * (config.campRadius - config.coalBallSize);
+                        // 在边界内随机改变方向
+                        coalBall.angle = Math.atan2(campPosition.y - coalBall.y, campPosition.x - coalBall.x) + (Math.random() - 0.5) * Math.PI;
+                    }
                 }
                 
                 if (inCamp) {
@@ -326,10 +340,11 @@
                         // 第一次进入营地，立即扣分
                         gameState.score = Math.max(0, gameState.score - config.scoreDecrease);
                         coalBall.inCamp = true;
+                        coalBall.restricted = true; // 限制在营地内活动
                         coalBall.timeInCamp = 0;
                         coalBall.lastHealthDecrease = currentTime;
-                        // 困住煤球（速度设为0）
-                        coalBall.speed = 0;
+                        // 降低速度，在营地内缓慢移动
+                        coalBall.speed = 1;
                     }
                     
                     // 增加停留时间
@@ -344,6 +359,7 @@
                 } else {
                     coalBall.timeInCamp = 0;
                     coalBall.inCamp = false;
+                    coalBall.restricted = false;
                 }
                 
                 // 检查是否飞出屏幕
@@ -385,6 +401,11 @@
                     coalBall.targetY = coalBall.y + Math.sin(angle) * bounceDistance;
                     coalBall.angle = angle;
                     coalBall.speed = 5; // 弹开速度
+                    
+                    // 解除营地限制（如果之前在营地内）
+                    coalBall.restricted = false;
+                    coalBall.inCamp = false;
+                    coalBall.timeInCamp = 0;
                     
                     // 增加得分
                     gameState.score += 10;
@@ -497,6 +518,11 @@
                                 coalBall.targetY = coalBall.y + Math.sin(angle) * bounceDistance;
                                 coalBall.angle = angle;
                                 coalBall.speed = 8; // 弹开速度
+                                
+                                // 解除营地限制（如果之前在营地内）
+                                coalBall.restricted = false;
+                                coalBall.inCamp = false;
+                                coalBall.timeInCamp = 0;
                                 
                                 // 增加得分
                                 gameState.score += 10;
