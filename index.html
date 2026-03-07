@@ -307,15 +307,15 @@
         }
 
         // 检查碰撞（圆形碰撞检测）
-        function checkCollision(coalBall) {
+        function checkCollision(pos) {
             // 计算煤球与营地中心的距离
             const distance = Math.sqrt(
-                Math.pow(coalBall.x - campPosition.x, 2) + 
-                Math.pow(coalBall.y - campPosition.y, 2)
+                Math.pow(pos.x - campPosition.x, 2) + 
+                Math.pow(pos.y - campPosition.y, 2)
             );
             
-            // 检查是否在营地范围内
-            return distance <= config.campRadius;
+            // 检查是否在营地范围内（考虑煤球半径）
+            return distance <= config.campRadius + config.coalBallSize;
         }
 
         // 更新游戏状态
@@ -377,10 +377,10 @@
                     );
                     
                     // 如果超出营地范围，将其拉回边界内
-                    if (distanceFromCenter > config.campRadius - config.coalBallSize) {
+                    if (distanceFromCenter > config.campRadius) {
                         const angle = Math.atan2(coalBall.y - campPosition.y, coalBall.x - campPosition.x);
-                        coalBall.x = campPosition.x + Math.cos(angle) * (config.campRadius - config.coalBallSize);
-                        coalBall.y = campPosition.y + Math.sin(angle) * (config.campRadius - config.coalBallSize);
+                        coalBall.x = campPosition.x + Math.cos(angle) * config.campRadius;
+                        coalBall.y = campPosition.y + Math.sin(angle) * config.campRadius;
                         // 在边界内随机改变方向
                         coalBall.angle = Math.atan2(campPosition.y - coalBall.y, campPosition.x - coalBall.x) + (Math.random() - 0.5) * Math.PI;
                     }
