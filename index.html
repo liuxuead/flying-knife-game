@@ -323,7 +323,7 @@
                 if (inCamp) {
                     // 煤球进入营地
                     if (!coalBall.inCamp) {
-                        // 第一次进入营地，扣分
+                        // 第一次进入营地，立即扣分
                         gameState.score = Math.max(0, gameState.score - config.scoreDecrease);
                         coalBall.inCamp = true;
                         coalBall.timeInCamp = 0;
@@ -335,7 +335,7 @@
                     // 增加停留时间
                     coalBall.timeInCamp += 16; // 假设60fps，每帧16ms
                     
-                    // 每3秒减少生命值
+                    // 煤球在营地停留3秒后，开始每1秒减少生命值
                     if (coalBall.timeInCamp >= 3000 && 
                         currentTime - coalBall.lastHealthDecrease > config.healthDecreaseInterval) {
                         gameState.health -= config.healthDecrease;
