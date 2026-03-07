@@ -326,18 +326,31 @@
                 // 检查当前帧是否在营地内
                 const inCamp = checkCollision(coalBall);
                 
-                // 如果煤球从外部进入营地（上一帧在外，当前帧在内），扣血
+                // 如果煤球从外部进入营地（上一帧在外，当前帧在内），扣血（仅非弹击状态）
                 if (!wasInCamp && inCamp && !coalBall.isBouncing) {
                     gameState.health = Math.max(0, gameState.health - config.healthDecrease);
                 }
                 
-                // 如果煤球正在弹飞，检查是否已经飞出营地
-                if (coalBall.isBouncing && !inCamp) {
-                    coalBall.isBouncing = false; // 弹飞完成
+                // 弹击状态下完全不受营地影响，直接跳过所有营地逻辑
+                if (coalBall.isBouncing) {
+                    // 更新上一帧位置
+                    coalBall.lastX = coalBall.x;
+                    coalBall.lastY = coalBall.y;
+                    
+                    // 检查是否飞出屏幕
+                    if (
+                        coalBall.x < -config.coalBallSize * 2 ||
+                        coalBall.x > canvas.width + config.coalBallSize * 2 ||
+                        coalBall.y < -config.coalBallSize * 2 ||
+                        coalBall.y > canvas.height + config.coalBallSize * 2
+                    ) {
+                        gameState.coalBalls.splice(i, 1);
+                    }
+                    continue; // 跳过剩余逻辑
                 }
                 
                 // 如果煤球在营地内且不是正在弹飞，限制其在营地范围内移动
-                if (inCamp && coalBall.restricted && !coalBall.isBouncing) {
+                if (inCamp && coalBall.restricted) {
                     const distanceFromCenter = Math.sqrt(
                         Math.pow(coalBall.x - campPosition.x, 2) + 
                         Math.pow(coalBall.y - campPosition.y, 2)
@@ -353,7 +366,7 @@
                     }
                 }
                 
-                if (inCamp && !coalBall.isBouncing) {
+                if (inCamp) {
                     // 煤球进入营地
                     if (!coalBall.inCamp) {
                         coalBall.inCamp = true;
