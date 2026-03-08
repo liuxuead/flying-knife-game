@@ -106,7 +106,7 @@
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
-    <button class="music-btn" id="musicBtn" onclick="toggleMusic()">🎵</button>
+    <button class="music-btn" id="soundBtn" onclick="toggleSound()">🔊</button>
     <div class="game-over" id="gameOver">
         <h2>游戏结束</h2>
         <p>得分: <span id="finalScore">0</span></p>
@@ -129,33 +129,41 @@
             lastExtraSpawnTime: 0 // 上次额外生成煤球的时间
         };
 
-        // 背景音乐
-        let bgMusic = null;
-        let isMusicPlaying = false;
+        // 音效系统
+        let soundEffects = {
+            bounce: null
+        };
+        let isSoundEnabled = true;
 
-        // 切换音乐
-        function toggleMusic() {
-            const musicBtn = document.getElementById('musicBtn');
-            
-            if (!bgMusic) {
-                bgMusic = new Audio('雨夜归程.mp3');
-                bgMusic.loop = true;
-                bgMusic.volume = 0.5;
-            }
-            
-            if (isMusicPlaying) {
-                bgMusic.pause();
-                musicBtn.textContent = '🔇';
-                musicBtn.classList.add('muted');
-                isMusicPlaying = false;
-            } else {
-                bgMusic.play().catch(e => {
-                    console.log('音乐播放失败:', e);
-                    alert('音乐文件未找到，请添加 雨夜归程.mp3 文件');
+        // 加载音效
+        function loadSoundEffects() {
+            soundEffects.bounce = new Audio('bounce.mp3');
+            soundEffects.bounce.volume = 0.5;
+        }
+
+        // 播放音效
+        function playSound(soundName) {
+            if (isSoundEnabled && soundEffects[soundName]) {
+                // 重置音频位置，确保可以连续播放
+                soundEffects[soundName].currentTime = 0;
+                soundEffects[soundName].play().catch(e => {
+                    console.log('音效播放失败:', e);
                 });
-                musicBtn.textContent = '🎵';
-                musicBtn.classList.remove('muted');
-                isMusicPlaying = true;
+            }
+        }
+
+        // 切换音效
+        function toggleSound() {
+            const soundBtn = document.getElementById('soundBtn');
+            
+            isSoundEnabled = !isSoundEnabled;
+            
+            if (isSoundEnabled) {
+                soundBtn.textContent = '🔊';
+                soundBtn.classList.remove('muted');
+            } else {
+                soundBtn.textContent = '🔇';
+                soundBtn.classList.add('muted');
             }
         }
 
@@ -641,6 +649,9 @@
                     // 增加得分
                     gameState.score += 10;
                     
+                    // 播放弹开音效
+                    playSound('bounce');
+                    
                     break;
                 }
             }
@@ -691,6 +702,9 @@
         function init() {
             resizeCanvas();
             window.addEventListener('resize', resizeCanvas);
+            
+            // 加载音效
+            loadSoundEffects();
             
             // 触摸事件
             canvas.addEventListener('touchstart', (e) => {
@@ -751,6 +765,9 @@
                                 
                                 // 增加得分
                                 gameState.score += 10;
+                                
+                                // 播放弹开音效
+                                playSound('bounce');
                             }
                         });
                     } else {
