@@ -224,15 +224,20 @@
         let imagesLoaded = 0;
         const totalImages = 6; // 5张背景 + 1张营地
 
+        let gameStarted = false;
+        
         function checkImagesLoaded() {
             imagesLoaded++;
             console.log(`图片加载进度: ${imagesLoaded}/${totalImages}`);
-            if (imagesLoaded >= totalImages) {
-                console.log('所有图片加载完成');
+            if (imagesLoaded >= totalImages && !gameStarted) {
+                console.log('所有图片加载完成，开始游戏');
+                gameStarted = true;
                 // 隐藏加载界面，显示游戏
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('gameCanvas').style.display = 'block';
                 document.getElementById('musicBtn').style.display = 'flex';
+                // 开始游戏循环
+                gameLoop();
             }
         }
 
@@ -711,7 +716,7 @@
             gameState.coalBalls = [];
             gameState.currentLevel = 1;
             gameState.spawnRate = 3000;
-            gameState.lastSpawnTime = 0;
+            gameState.lastSpawnTime = Date.now(); // 重置为当前时间，避免立即生成煤球
             
             document.getElementById('gameOver').style.display = 'none';
         }
@@ -807,7 +812,7 @@
                 bounceCoalBall(x, y);
             });
             
-            gameLoop();
+            // 注意：gameLoop现在在图片加载完成后才调用
         }
         
         // 计算点到线段的距离
