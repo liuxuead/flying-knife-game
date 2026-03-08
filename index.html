@@ -80,34 +80,10 @@
             0%, 100% { opacity: 0; }
             20%, 80% { opacity: 1; }
         }
-        .music-btn {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.8);
-            border: 2px solid #333;
-            font-size: 24px;
-            cursor: pointer;
-            z-index: 50;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .music-btn:hover {
-            background: rgba(255, 255, 255, 1);
-        }
-        .music-btn.muted {
-            opacity: 0.5;
-        }
-
     </style>
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
-    <button class="music-btn" id="musicBtn" onclick="toggleMusic()">🎵</button>
     <div class="game-over" id="gameOver">
         <h2>游戏结束</h2>
         <p>得分: <span id="finalScore">0</span></p>
@@ -132,11 +108,9 @@
         // 关卡配置
         const levelConfig = {
             levelScores: [0, 300, 1000, 2000, 3000], // 每关的分数目标
-            speedMultipliers: [1, 1.8, 2.5, 3.5, 5], // 每关的速度倍数（加大差距）
+            speedMultipliers: [1, 1.5, 2, 2.5, 3], // 每关的速度倍数
             maxCoalBalls: [3, 5, 7, 9, 12], // 每关屏幕内最大煤球数量
-            backgroundImages: ['background1.png', 'background2.png', 'background3.png', 'background4.png', 'background5.png'], // 每关背景图片
-            // 每关煤球最大停留时间（毫秒），逐关缩短
-            coalBallMaxTimes: [3000, 2500, 2000, 1500, 1000],
+            backgroundImages: ['', '', '', '', ''], // 预留背景图片路径
             campColors: [
                 'rgba(139, 69, 19, 0.2)', // 第1关：棕色
                 'rgba(0, 100, 0, 0.2)',   // 第2关：深绿色
@@ -162,8 +136,8 @@
 
         // 游戏配置
         const config = {
-            campWidth: 120, // 营地宽度（像素）
-            campHeight: 120, // 营地高度（像素）
+            campWidth: 200, // 营地宽度（像素）
+            campHeight: 200, // 营地高度（像素）
             coalBallSize: 20, // 煤球大小（半径）
             coalBallSpeed: 2, // 煤球移动速度
             coalBallMaxTime: 3000, // 煤球最大停留时间（毫秒）
@@ -179,49 +153,6 @@
         // 加载煤球图片
         const coalBallImage = new Image();
         coalBallImage.src = 'xiaomeiqiu.png';
-
-        // 加载营地图片
-        const campImage = new Image();
-        campImage.src = 'chengbao.png';
-
-        // 加载背景图片
-        const backgroundImages = [];
-        for (let i = 1; i <= 5; i++) {
-            const img = new Image();
-            img.src = `background${i}.png`;
-            backgroundImages.push(img);
-        }
-
-        // 背景音乐
-        let bgMusic = null;
-        let isMusicPlaying = false;
-
-        // 切换音乐
-        function toggleMusic() {
-            const musicBtn = document.getElementById('musicBtn');
-            
-            if (!bgMusic) {
-                // 首次点击，创建音频对象
-                bgMusic = new Audio('雨夜归程.mp3');
-                bgMusic.loop = true;
-                bgMusic.volume = 0.5;
-            }
-            
-            if (isMusicPlaying) {
-                bgMusic.pause();
-                musicBtn.textContent = '🔇';
-                musicBtn.classList.add('muted');
-                isMusicPlaying = false;
-            } else {
-                bgMusic.play().catch(e => {
-                    console.log('音乐播放失败:', e);
-                    alert('音乐文件未找到，请添加 雨夜归程.mp3 文件');
-                });
-                musicBtn.textContent = '🎵';
-                musicBtn.classList.remove('muted');
-                isMusicPlaying = true;
-            }
-        }
 
         // 营地位置（中心坐标）
         let campPosition = {
@@ -308,7 +239,8 @@
             ctx.save();
             
             // 使用图片绘制煤球
-            const imageSize = config.coalBallSize * 2;
+            // 图片大小64x64，煤球半径20，所以图片大小应该是40x40
+            const imageSize = config.coalBallSize * 2; // 40像素
             ctx.drawImage(
                 coalBallImage, 
                 coalBall.x - imageSize / 2, 
@@ -324,17 +256,25 @@
         function drawCamp() {
             ctx.save();
             
+            // 获取当前关卡的营地颜色
+            const campColor = levelConfig.campColors[gameState.currentLevel - 1];
+            const borderColor = levelConfig.campBorderColors[gameState.currentLevel - 1];
+            
+            // 绘制营地范围（方形）
             const halfWidth = config.campWidth / 2;
             const halfHeight = config.campHeight / 2;
+            ctx.fillStyle = campColor;
+            ctx.fillRect(campPosition.x - halfWidth, campPosition.y - halfHeight, config.campWidth, config.campHeight);
+            ctx.strokeStyle = borderColor;
+            ctx.lineWidth = 3;
+            ctx.strokeRect(campPosition.x - halfWidth, campPosition.y - halfHeight, config.campWidth, config.campHeight);
             
-            // 使用图片绘制营地
-            ctx.drawImage(
-                campImage,
-                campPosition.x - halfWidth,
-                campPosition.y - halfHeight,
-                config.campWidth,
-                config.campHeight
-            );
+            // 绘制营地中心标志
+            ctx.fillStyle = borderColor;
+            ctx.fillRect(campPosition.x - 20, campPosition.y - 20, 40, 40);
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(campPosition.x - 20, campPosition.y - 20, 40, 40);
             
             // 绘制营地名
             ctx.fillStyle = 'white';
@@ -380,26 +320,19 @@
 
         // 绘制背景
         function drawBackground() {
-            // 获取当前关卡的背景图片
-            const currentLevelIndex = gameState.currentLevel - 1;
-            const bgImage = backgroundImages[currentLevelIndex];
+            // 获取当前关卡的背景渐变颜色
+            const gradientColors = levelConfig.backgroundGradients[gameState.currentLevel - 1];
             
-            if (bgImage && bgImage.complete) {
-                // 使用背景图片
-                ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
-            } else {
-                // 图片未加载完成时，使用渐变背景作为备用
-                const gradientColors = levelConfig.backgroundGradients[currentLevelIndex];
-                const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-                gradient.addColorStop(0, gradientColors[0]);
-                gradient.addColorStop(1, gradientColors[1]);
-                ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
-                // 绘制简单的草地
-                ctx.fillStyle = '#228B22';
-                ctx.fillRect(0, canvas.height * 0.8, canvas.width, canvas.height * 0.2);
-            }
+            // 渐变背景
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, gradientColors[0]);
+            gradient.addColorStop(1, gradientColors[1]);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制简单的草地
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(0, canvas.height * 0.8, canvas.width, canvas.height * 0.2);
         }
 
         // 检查碰撞（方形碰撞检测）
@@ -436,13 +369,7 @@
             if (nextLevel <= levelConfig.levelScores.length) {
                 const nextLevelScore = levelConfig.levelScores[nextLevel - 1];
                 if (gameState.score >= nextLevelScore) {
-                    const oldLevel = gameState.currentLevel;
                     gameState.currentLevel = nextLevel;
-                    
-                    // 第4关开始恢复血条（只在进入第4关时恢复一次）
-                    if (gameState.currentLevel === 4 && oldLevel < 4) {
-                        gameState.health = Math.min(100, gameState.health + 30); // 恢复30点生命值，最多100
-                    }
                     
                     // 显示关卡提升提示
                     document.getElementById('currentLevelDisplay').textContent = gameState.currentLevel;
@@ -475,13 +402,18 @@
                 spawnCoalBall();
                 gameState.lastSpawnTime = currentTime;
                 
-                // 随着等级提高，减少生成间隔（每关减少200毫秒，最低500毫秒）
-                gameState.spawnRate = Math.max(500, 3000 - (gameState.currentLevel - 1) * 200);
+                // 随着等级提高，减少生成间隔
+                if (gameState.currentLevel > 1) {
+                    gameState.spawnRate = Math.max(500, 1000 - (gameState.currentLevel - 1) * 100);
+                }
             }
             
             // 更新煤球
             for (let i = gameState.coalBalls.length - 1; i >= 0; i--) {
                 const coalBall = gameState.coalBalls[i];
+                
+                // 检查上一帧是否完全进入营地内部（用于扣血判断）
+                const wasFullyInside = checkFullyInsideCamp({x: coalBall.lastX, y: coalBall.lastY});
                 
                 // 移动煤球
                 coalBall.x += Math.cos(coalBall.angle) * coalBall.speed;
@@ -490,9 +422,10 @@
                 // 检查当前帧是否在营地内（用于限制移动）
                 const inCamp = checkCollision(coalBall);
                 
-                // 所有关卡都使用前三关的扣血模式：完全进入营地内部才扣血
-                const wasFullyInside = checkFullyInsideCamp({x: coalBall.lastX, y: coalBall.lastY});
+                // 检查当前帧是否完全进入营地内部（用于扣血判断）
                 const isFullyInside = checkFullyInsideCamp(coalBall);
+                
+                // 如果煤球从外部完全进入营地内部（上一帧不在内部，当前帧在内部），扣血（仅非弹击状态）
                 if (!wasFullyInside && isFullyInside && !coalBall.isBouncing) {
                     gameState.health = Math.max(0, gameState.health - config.healthDecrease);
                 }
@@ -552,11 +485,8 @@
                     // 增加停留时间
                     coalBall.timeInCamp += 16; // 假设60fps，每帧16ms
                     
-                    // 获取当前关卡的停留时间限制
-                    const currentMaxTime = levelConfig.coalBallMaxTimes[gameState.currentLevel - 1];
-                    
-                    // 煤球在营地停留达到关卡限制时间后，开始每1秒减少生命值
-                    if (coalBall.timeInCamp >= currentMaxTime && 
+                    // 煤球在营地停留3秒后，开始每1秒减少生命值
+                    if (coalBall.timeInCamp >= 3000 && 
                         currentTime - coalBall.lastHealthDecrease > config.healthDecreaseInterval) {
                         gameState.health -= config.healthDecrease;
                         coalBall.lastHealthDecrease = currentTime;
@@ -650,7 +580,7 @@
             gameState.coalBalls = [];
             gameState.currentLevel = 1;
             gameState.spawnRate = 3000;
-            gameState.lastSpawnTime = Date.now(); // 重置为当前时间，避免立即生成煤球
+            gameState.lastSpawnTime = 0;
             
             document.getElementById('gameOver').style.display = 'none';
         }
@@ -746,8 +676,6 @@
                 bounceCoalBall(x, y);
             });
             
-            // 初始化游戏时间并开始游戏循环
-            gameState.lastSpawnTime = Date.now();
             gameLoop();
         }
         
