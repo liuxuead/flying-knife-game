@@ -170,6 +170,8 @@
             speedMultipliers: [1, 1.8, 2.5, 3.5, 5], // 每关的速度倍数（加大差距）
             maxCoalBalls: [3, 5, 7, 9, 12], // 每关屏幕内最大煤球数量
             backgroundImages: ['background1.png', 'background2.png', 'background3.png', 'background4.png', 'background5.png'], // 每关背景图片
+            // 每关煤球最大停留时间（毫秒），逐关缩短
+            coalBallMaxTimes: [3000, 2500, 2000, 1500, 1000],
             campColors: [
                 'rgba(139, 69, 19, 0.2)', // 第1关：棕色
                 'rgba(0, 100, 0, 0.2)',   // 第2关：深绿色
@@ -498,12 +500,9 @@
                     const oldLevel = gameState.currentLevel;
                     gameState.currentLevel = nextLevel;
                     
-                    // 第4关开始恢复血条
-                    if (gameState.currentLevel >= 4) {
-                        // 直接赋值：第4关100，第5关90，第6关80，第7关70，第8关60，第9关50，第10关及以上40
-                        const healthValues = [100, 90, 80, 70, 60, 50, 40];
-                        const levelIndex = Math.min(gameState.currentLevel - 4, healthValues.length - 1);
-                        gameState.health = healthValues[levelIndex];
+                    // 第4关开始恢复血条（只在进入第4关时恢复一次）
+                    if (gameState.currentLevel === 4 && oldLevel < 4) {
+                        gameState.health = Math.min(100, gameState.health + 30); // 恢复30点生命值，最多100
                     }
                     
                     // 显示关卡提升提示
@@ -537,10 +536,8 @@
                 spawnCoalBall();
                 gameState.lastSpawnTime = currentTime;
                 
-                // 随着等级提高，减少生成间隔
-                if (gameState.currentLevel > 1) {
-                    gameState.spawnRate = Math.max(500, 1000 - (gameState.currentLevel - 1) * 100);
-                }
+                // 随着等级提高，减少生成间隔（每关减少200毫秒，最低500毫秒）
+                gameState.spawnRate = Math.max(500, 3000 - (gameState.currentLevel - 1) * 200);
             }
             
             // 更新煤球
@@ -616,8 +613,11 @@
                     // 增加停留时间
                     coalBall.timeInCamp += 16; // 假设60fps，每帧16ms
                     
-                    // 煤球在营地停留3秒后，开始每1秒减少生命值
-                    if (coalBall.timeInCamp >= 3000 && 
+                    // 获取当前关卡的停留时间限制
+                    const currentMaxTime = levelConfig.coalBallMaxTimes[gameState.currentLevel - 1];
+                    
+                    // 煤球在营地停留达到关卡限制时间后，开始每1秒减少生命值
+                    if (coalBall.timeInCamp >= currentMaxTime && 
                         currentTime - coalBall.lastHealthDecrease > config.healthDecreaseInterval) {
                         gameState.health -= config.healthDecrease;
                         coalBall.lastHealthDecrease = currentTime;
