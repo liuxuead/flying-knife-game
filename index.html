@@ -131,7 +131,7 @@
         // 关卡配置
         const levelConfig = {
             levelScores: [0, 300, 1000, 2000, 3000], // 每关的分数目标
-            speedMultipliers: [1, 1.5, 2, 2.5, 3], // 每关的速度倍数
+            speedMultipliers: [1, 1.8, 2.5, 3.5, 5], // 每关的速度倍数（加大差距）
             maxCoalBalls: [3, 5, 7, 9, 12], // 每关屏幕内最大煤球数量
             backgroundImages: ['', '', '', '', ''], // 预留背景图片路径
             campColors: [
@@ -159,8 +159,8 @@
 
         // 游戏配置
         const config = {
-            campWidth: 200, // 营地宽度（像素）
-            campHeight: 200, // 营地高度（像素）
+            campWidth: 120, // 营地宽度（像素）
+            campHeight: 120, // 营地高度（像素）
             coalBallSize: 20, // 煤球大小（半径）
             coalBallSpeed: 2, // 煤球移动速度
             coalBallMaxTime: 3000, // 煤球最大停留时间（毫秒）
@@ -176,6 +176,10 @@
         // 加载煤球图片
         const coalBallImage = new Image();
         coalBallImage.src = 'xiaomeiqiu.png';
+
+        // 加载营地图片
+        const campImage = new Image();
+        campImage.src = 'chengbao.png';
 
         // 背景音乐
         let bgMusic = null;
@@ -310,25 +314,16 @@
         function drawCamp() {
             ctx.save();
             
-            // 获取当前关卡的营地颜色
-            const campColor = levelConfig.campColors[gameState.currentLevel - 1];
-            const borderColor = levelConfig.campBorderColors[gameState.currentLevel - 1];
-            
-            // 绘制营地范围（方形）
+            // 使用图片绘制营地
             const halfWidth = config.campWidth / 2;
             const halfHeight = config.campHeight / 2;
-            ctx.fillStyle = campColor;
-            ctx.fillRect(campPosition.x - halfWidth, campPosition.y - halfHeight, config.campWidth, config.campHeight);
-            ctx.strokeStyle = borderColor;
-            ctx.lineWidth = 3;
-            ctx.strokeRect(campPosition.x - halfWidth, campPosition.y - halfHeight, config.campWidth, config.campHeight);
-            
-            // 绘制营地中心标志
-            ctx.fillStyle = borderColor;
-            ctx.fillRect(campPosition.x - 20, campPosition.y - 20, 40, 40);
-            ctx.strokeStyle = '#FFD700';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(campPosition.x - 20, campPosition.y - 20, 40, 40);
+            ctx.drawImage(
+                campImage,
+                campPosition.x - halfWidth,
+                campPosition.y - halfHeight,
+                config.campWidth,
+                config.campHeight
+            );
             
             // 绘制营地名
             ctx.fillStyle = 'white';
@@ -482,20 +477,11 @@
                 // 检查当前帧是否在营地内（用于限制移动）
                 const inCamp = checkCollision(coalBall);
                 
-                // 根据关卡使用不同的扣血逻辑
-                if (gameState.currentLevel >= 4) {
-                    // 第4关及以上：碰到营地边界就扣血
-                    const wasInCamp = checkCollision({x: coalBall.lastX, y: coalBall.lastY});
-                    if (!wasInCamp && inCamp && !coalBall.isBouncing) {
-                        gameState.health = Math.max(0, gameState.health - config.healthDecrease);
-                    }
-                } else {
-                    // 第1-3关：完全进入营地内部才扣血
-                    const wasFullyInside = checkFullyInsideCamp({x: coalBall.lastX, y: coalBall.lastY});
-                    const isFullyInside = checkFullyInsideCamp(coalBall);
-                    if (!wasFullyInside && isFullyInside && !coalBall.isBouncing) {
-                        gameState.health = Math.max(0, gameState.health - config.healthDecrease);
-                    }
+                // 所有关卡都使用前三关的扣血模式：完全进入营地内部才扣血
+                const wasFullyInside = checkFullyInsideCamp({x: coalBall.lastX, y: coalBall.lastY});
+                const isFullyInside = checkFullyInsideCamp(coalBall);
+                if (!wasFullyInside && isFullyInside && !coalBall.isBouncing) {
+                    gameState.health = Math.max(0, gameState.health - config.healthDecrease);
                 }
                 
                 // 弹击状态下完全不受营地影响，直接跳过所有营地逻辑
