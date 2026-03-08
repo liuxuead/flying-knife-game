@@ -102,11 +102,47 @@
         .music-btn.muted {
             opacity: 0.5;
         }
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+            z-index: 100;
+        }
+        .loading h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        .loading p {
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255,255,255,0.3);
+            border-top: 5px solid #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
-    <canvas id="gameCanvas"></canvas>
-    <button class="music-btn" id="musicBtn" onclick="toggleMusic()">🎵</button>
+    <div class="loading" id="loading">
+        <h2>加载中...</h2>
+        <div class="spinner"></div>
+        <p>正在加载游戏资源</p>
+    </div>
+    <canvas id="gameCanvas" style="display: none;"></canvas>
+    <button class="music-btn" id="musicBtn" onclick="toggleMusic()" style="display: none;">🎵</button>
     <div class="game-over" id="gameOver">
         <h2>游戏结束</h2>
         <p>得分: <span id="finalScore">0</span></p>
@@ -183,8 +219,34 @@
 
         // 加载背景图片
         const backgroundImages = [];
+        let imagesLoaded = 0;
+        const totalImages = 6; // 5张背景 + 1张营地
+
+        function checkImagesLoaded() {
+            imagesLoaded++;
+            console.log(`图片加载进度: ${imagesLoaded}/${totalImages}`);
+            if (imagesLoaded >= totalImages) {
+                console.log('所有图片加载完成');
+                // 隐藏加载界面，显示游戏
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('gameCanvas').style.display = 'block';
+                document.getElementById('musicBtn').style.display = 'flex';
+            }
+        }
+
+        campImage.onload = checkImagesLoaded;
+        campImage.onerror = () => {
+            console.log('营地图片加载失败');
+            checkImagesLoaded();
+        };
+
         for (let i = 1; i <= 5; i++) {
             const img = new Image();
+            img.onload = checkImagesLoaded;
+            img.onerror = () => {
+                console.log(`背景图片${i}加载失败`);
+                checkImagesLoaded();
+            };
             img.src = `background${i}.png`;
             backgroundImages.push(img);
         }
