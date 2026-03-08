@@ -80,10 +80,33 @@
             0%, 100% { opacity: 0; }
             20%, 80% { opacity: 1; }
         }
+        .music-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.8);
+            border: 2px solid #333;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .music-btn:hover {
+            background: rgba(255, 255, 255, 1);
+        }
+        .music-btn.muted {
+            opacity: 0.5;
+        }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
+    <button class="music-btn" id="musicBtn" onclick="toggleMusic()">🎵</button>
     <div class="game-over" id="gameOver">
         <h2>游戏结束</h2>
         <p>得分: <span id="finalScore">0</span></p>
@@ -153,6 +176,37 @@
         // 加载煤球图片
         const coalBallImage = new Image();
         coalBallImage.src = 'xiaomeiqiu.png';
+
+        // 背景音乐
+        let bgMusic = null;
+        let isMusicPlaying = false;
+
+        // 切换音乐
+        function toggleMusic() {
+            const musicBtn = document.getElementById('musicBtn');
+            
+            if (!bgMusic) {
+                // 首次点击，创建音频对象
+                bgMusic = new Audio('background.mp3');
+                bgMusic.loop = true;
+                bgMusic.volume = 0.5;
+            }
+            
+            if (isMusicPlaying) {
+                bgMusic.pause();
+                musicBtn.textContent = '🔇';
+                musicBtn.classList.add('muted');
+                isMusicPlaying = false;
+            } else {
+                bgMusic.play().catch(e => {
+                    console.log('音乐播放失败:', e);
+                    alert('音乐文件未找到，请添加 background.mp3 文件');
+                });
+                musicBtn.textContent = '🎵';
+                musicBtn.classList.remove('muted');
+                isMusicPlaying = true;
+            }
+        }
 
         // 营地位置（中心坐标）
         let campPosition = {
@@ -369,7 +423,16 @@
             if (nextLevel <= levelConfig.levelScores.length) {
                 const nextLevelScore = levelConfig.levelScores[nextLevel - 1];
                 if (gameState.score >= nextLevelScore) {
+                    const oldLevel = gameState.currentLevel;
                     gameState.currentLevel = nextLevel;
+                    
+                    // 第4关开始恢复血条
+                    if (gameState.currentLevel >= 4) {
+                        // 直接赋值：第4关100，第5关90，第6关80，第7关70，第8关60，第9关50，第10关及以上40
+                        const healthValues = [100, 90, 80, 70, 60, 50, 40];
+                        const levelIndex = Math.min(gameState.currentLevel - 4, healthValues.length - 1);
+                        gameState.health = healthValues[levelIndex];
+                    }
                     
                     // 显示关卡提升提示
                     document.getElementById('currentLevelDisplay').textContent = gameState.currentLevel;
@@ -412,9 +475,6 @@
             for (let i = gameState.coalBalls.length - 1; i >= 0; i--) {
                 const coalBall = gameState.coalBalls[i];
                 
-                // 检查上一帧是否完全进入营地内部（用于扣血判断）
-                const wasFullyInside = checkFullyInsideCamp({x: coalBall.lastX, y: coalBall.lastY});
-                
                 // 移动煤球
                 coalBall.x += Math.cos(coalBall.angle) * coalBall.speed;
                 coalBall.y += Math.sin(coalBall.angle) * coalBall.speed;
@@ -422,12 +482,20 @@
                 // 检查当前帧是否在营地内（用于限制移动）
                 const inCamp = checkCollision(coalBall);
                 
-                // 检查当前帧是否完全进入营地内部（用于扣血判断）
-                const isFullyInside = checkFullyInsideCamp(coalBall);
-                
-                // 如果煤球从外部完全进入营地内部（上一帧不在内部，当前帧在内部），扣血（仅非弹击状态）
-                if (!wasFullyInside && isFullyInside && !coalBall.isBouncing) {
-                    gameState.health = Math.max(0, gameState.health - config.healthDecrease);
+                // 根据关卡使用不同的扣血逻辑
+                if (gameState.currentLevel >= 4) {
+                    // 第4关及以上：碰到营地边界就扣血
+                    const wasInCamp = checkCollision({x: coalBall.lastX, y: coalBall.lastY});
+                    if (!wasInCamp && inCamp && !coalBall.isBouncing) {
+                        gameState.health = Math.max(0, gameState.health - config.healthDecrease);
+                    }
+                } else {
+                    // 第1-3关：完全进入营地内部才扣血
+                    const wasFullyInside = checkFullyInsideCamp({x: coalBall.lastX, y: coalBall.lastY});
+                    const isFullyInside = checkFullyInsideCamp(coalBall);
+                    if (!wasFullyInside && isFullyInside && !coalBall.isBouncing) {
+                        gameState.health = Math.max(0, gameState.health - config.healthDecrease);
+                    }
                 }
                 
                 // 弹击状态下完全不受营地影响，直接跳过所有营地逻辑
