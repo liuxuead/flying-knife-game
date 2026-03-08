@@ -55,6 +55,31 @@
         .game-over button:hover {
             background: #45a049;
         }
+        .level-up {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 215, 0, 0.9);
+            color: #333;
+            padding: 30px 50px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 100;
+            display: none;
+            animation: fadeInOut 2s ease-in-out;
+        }
+        .level-up h2 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        .level-up p {
+            font-size: 18px;
+        }
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; }
+            20%, 80% { opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -64,6 +89,10 @@
         <p>得分: <span id="finalScore">0</span></p>
         <button onclick="restartGame()">重新开始</button>
     </div>
+    <div class="level-up" id="levelUp">
+        <h2>关卡提升！</h2>
+        <p>第 <span id="currentLevelDisplay">1</span> 关</p>
+    </div>
     <script>
         // 游戏状态
         const gameState = {
@@ -71,12 +100,38 @@
             health: 100,
             gameOver: false,
             coalBalls: [],
-            level: 1,
+            currentLevel: 1, // 当前关卡
             spawnRate: 5000, // 煤球生成间隔（毫秒）- 测试用5秒
             lastSpawnTime: 0
         };
 
-
+        // 关卡配置
+        const levelConfig = {
+            levelScores: [0, 1000, 2000, 3000, 5000], // 每关的分数目标
+            speedMultipliers: [1, 1.5, 2, 2.5, 3], // 每关的速度倍数
+            backgroundImages: ['', '', '', '', ''], // 预留背景图片路径
+            campColors: [
+                'rgba(139, 69, 19, 0.2)', // 第1关：棕色
+                'rgba(0, 100, 0, 0.2)',   // 第2关：深绿色
+                'rgba(0, 0, 139, 0.2)',   // 第3关：深蓝色
+                'rgba(139, 0, 139, 0.2)', // 第4关：深紫色
+                'rgba(139, 0, 0, 0.2)'    // 第5关：深红色
+            ],
+            campBorderColors: [
+                '#8B4513', // 第1关：棕色
+                '#006400', // 第2关：深绿色
+                '#00008B', // 第3关：深蓝色
+                '#8B008B', // 第4关：深紫色
+                '#8B0000'  // 第5关：深红色
+            ],
+            backgroundGradients: [
+                ['#87CEEB', '#98FB98'], // 第1关：天蓝到浅绿
+                ['#4682B4', '#32CD32'], // 第2关：钢蓝到酸橙绿
+                ['#191970', '#008080'], // 第3关：午夜蓝到青色
+                ['#4B0082', '#8B008B'], // 第4关：靛青到深紫
+                ['#8B0000', '#FF4500']  // 第5关：深红到橙红
+            ]
+        };
 
         // 游戏配置
         const config = {
@@ -110,8 +165,20 @@
 
         // 生成煤球
         function spawnCoalBall() {
-            // 随机边缘位置
-            const edge = Math.floor(Math.random() * 4); // 0: 上, 1: 右, 2: 下, 3: 左
+            // 调整随机概率：上下60%，左右40%
+            const edgeProbability = Math.random();
+            let edge;
+            
+            if (edgeProbability < 0.3) {
+                edge = 0; // 上：30%
+            } else if (edgeProbability < 0.6) {
+                edge = 2; // 下：30%
+            } else if (edgeProbability < 0.8) {
+                edge = 1; // 右：20%
+            } else {
+                edge = 3; // 左：20%
+            }
+            
             let x, y;
             
             switch(edge) {
@@ -137,6 +204,10 @@
             const targetX = campPosition.x + (Math.random() - 0.5) * config.campRadius * 0.5;
             const targetY = campPosition.y + (Math.random() - 0.5) * config.campRadius * 0.5;
 
+            // 根据关卡调整速度
+            const speedMultiplier = levelConfig.speedMultipliers[gameState.currentLevel - 1];
+            const baseSpeed = config.coalBallSpeed + Math.random() * 1;
+
             // 创建煤球
             const coalBall = {
                 x: x,
@@ -145,7 +216,7 @@
                 lastY: y,
                 targetX: targetX,
                 targetY: targetY,
-                speed: config.coalBallSpeed + Math.random() * 1, // 随机速度
+                speed: baseSpeed * speedMultiplier, // 应用关卡速度倍数
                 angle: Math.atan2(targetY - y, targetX - x),
                 timeInCamp: 0,
                 lastHealthDecrease: 0,
@@ -215,19 +286,23 @@
         function drawCamp() {
             ctx.save();
             
+            // 获取当前关卡的营地颜色
+            const campColor = levelConfig.campColors[gameState.currentLevel - 1];
+            const borderColor = levelConfig.campBorderColors[gameState.currentLevel - 1];
+            
             // 绘制营地范围（半透明圆形）
             ctx.beginPath();
             ctx.arc(campPosition.x, campPosition.y, config.campRadius, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(139, 69, 19, 0.2)';
+            ctx.fillStyle = campColor;
             ctx.fill();
-            ctx.strokeStyle = '#8B4513';
+            ctx.strokeStyle = borderColor;
             ctx.lineWidth = 3;
             ctx.stroke();
             
             // 绘制营地中心标志
             ctx.beginPath();
             ctx.arc(campPosition.x, campPosition.y, 20, 0, Math.PI * 2);
-            ctx.fillStyle = '#8B4513';
+            ctx.fillStyle = borderColor;
             ctx.fill();
             ctx.strokeStyle = '#FFD700';
             ctx.lineWidth = 2;
@@ -264,18 +339,26 @@
             // 绘制得分
             ctx.fillText('得分: ' + gameState.score, 20, 70);
             
-            // 绘制等级
-            ctx.fillText('等级: ' + gameState.level, 20, 100);
+            // 绘制关卡
+            ctx.fillText('关卡: ' + gameState.currentLevel, 20, 100);
+            
+            // 绘制关卡进度
+            const currentLevelScore = levelConfig.levelScores[gameState.currentLevel - 1];
+            const nextLevelScore = levelConfig.levelScores[gameState.currentLevel] || '∞';
+            ctx.fillText('下一关: ' + nextLevelScore + '分', 20, 130);
             
             ctx.restore();
         }
 
         // 绘制背景
         function drawBackground() {
+            // 获取当前关卡的背景渐变颜色
+            const gradientColors = levelConfig.backgroundGradients[gameState.currentLevel - 1];
+            
             // 渐变背景
             const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            gradient.addColorStop(0, '#87CEEB');
-            gradient.addColorStop(1, '#98FB98');
+            gradient.addColorStop(0, gradientColors[0]);
+            gradient.addColorStop(1, gradientColors[1]);
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
@@ -296,9 +379,33 @@
             return distance <= config.campRadius;
         }
 
+        // 检查关卡提升
+        function checkLevelUp() {
+            const nextLevel = gameState.currentLevel + 1;
+            if (nextLevel <= levelConfig.levelScores.length) {
+                const nextLevelScore = levelConfig.levelScores[nextLevel - 1];
+                if (gameState.score >= nextLevelScore) {
+                    gameState.currentLevel = nextLevel;
+                    
+                    // 显示关卡提升提示
+                    document.getElementById('currentLevelDisplay').textContent = gameState.currentLevel;
+                    const levelUpDiv = document.getElementById('levelUp');
+                    levelUpDiv.style.display = 'block';
+                    
+                    // 2秒后隐藏提示
+                    setTimeout(() => {
+                        levelUpDiv.style.display = 'none';
+                    }, 2000);
+                }
+            }
+        }
+
         // 更新游戏状态
         function update() {
             if (gameState.gameOver) return;
+            
+            // 检查关卡提升
+            checkLevelUp();
             
             // 生成煤球
             const currentTime = Date.now();
@@ -307,8 +414,8 @@
                 gameState.lastSpawnTime = currentTime;
                 
                 // 随着等级提高，减少生成间隔
-                if (gameState.level > 1) {
-                    gameState.spawnRate = Math.max(500, 1000 - (gameState.level - 1) * 100);
+                if (gameState.currentLevel > 1) {
+                    gameState.spawnRate = Math.max(500, 1000 - (gameState.currentLevel - 1) * 100);
                 }
             }
             
@@ -442,11 +549,6 @@
                     // 增加得分
                     gameState.score += 10;
                     
-                    // 检查是否升级
-                    if (gameState.score % 100 === 0) {
-                        gameState.level++;
-                    }
-                    
                     break;
                 }
             }
@@ -478,8 +580,8 @@
             gameState.health = 100;
             gameState.gameOver = false;
             gameState.coalBalls = [];
-            gameState.level = 1;
-            gameState.spawnRate = 1000;
+            gameState.currentLevel = 1;
+            gameState.spawnRate = 5000;
             gameState.lastSpawnTime = 0;
             
             document.getElementById('gameOver').style.display = 'none';
@@ -556,11 +658,6 @@
                                 
                                 // 增加得分
                                 gameState.score += 10;
-                                
-                                // 检查是否升级
-                                if (gameState.score % 100 === 0) {
-                                    gameState.level++;
-                                }
                             }
                         });
                     } else {
