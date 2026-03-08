@@ -107,8 +107,8 @@
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
-    <button class="music-btn" id="soundBtn" onclick="toggleSound()">🔊</button>
-    <button class="music-btn" id="pauseBtn" onclick="togglePause()" style="top: 80px;">⏸️</button>
+    <button class="music-btn" id="soundBtn" onclick="toggleSound()" style="z-index: 100;">🔊</button>
+    <button class="music-btn" id="pauseBtn" onclick="togglePause()" style="top: 80px; z-index: 100;">⏸️</button>
     <div class="game-over" id="gameOver">
         <h2>游戏结束</h2>
         <p>得分: <span id="finalScore">0</span></p>
