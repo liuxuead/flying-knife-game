@@ -348,6 +348,19 @@
             return distance <= config.campRadius;
         }
 
+        // 检查煤球是否完全进入营地内部（用于扣血判断）
+        function checkFullyInsideCamp(pos) {
+            // 计算煤球与营地中心的距离
+            const distance = Math.sqrt(
+                Math.pow(pos.x - campPosition.x, 2) + 
+                Math.pow(pos.y - campPosition.y, 2)
+            );
+            
+            // 只有当煤球完全进入营地内部才算首次攻击
+            // 营地半径减去煤球半径，这样煤球完全在营地内部才算
+            return distance <= config.campRadius - config.coalBallSize;
+        }
+
         // 检查关卡提升
         function checkLevelUp() {
             const nextLevel = gameState.currentLevel + 1;
@@ -397,18 +410,21 @@
             for (let i = gameState.coalBalls.length - 1; i >= 0; i--) {
                 const coalBall = gameState.coalBalls[i];
                 
-                // 检查上一帧是否在营地内
-                const wasInCamp = checkCollision({x: coalBall.lastX, y: coalBall.lastY});
+                // 检查上一帧是否完全进入营地内部（用于扣血判断）
+                const wasFullyInside = checkFullyInsideCamp({x: coalBall.lastX, y: coalBall.lastY});
                 
                 // 移动煤球
                 coalBall.x += Math.cos(coalBall.angle) * coalBall.speed;
                 coalBall.y += Math.sin(coalBall.angle) * coalBall.speed;
                 
-                // 检查当前帧是否在营地内
+                // 检查当前帧是否在营地内（用于限制移动）
                 const inCamp = checkCollision(coalBall);
                 
-                // 如果煤球从外部进入营地（上一帧在外，当前帧在内），扣血（仅非弹击状态）
-                if (!wasInCamp && inCamp && !coalBall.isBouncing) {
+                // 检查当前帧是否完全进入营地内部（用于扣血判断）
+                const isFullyInside = checkFullyInsideCamp(coalBall);
+                
+                // 如果煤球从外部完全进入营地内部（上一帧不在内部，当前帧在内部），扣血（仅非弹击状态）
+                if (!wasFullyInside && isFullyInside && !coalBall.isBouncing) {
                     gameState.health = Math.max(0, gameState.health - config.healthDecrease);
                 }
                 
