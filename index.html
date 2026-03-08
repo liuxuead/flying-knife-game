@@ -244,21 +244,49 @@
         const totalImages = 6; // 5张背景 + 1张营地
 
         let gameStarted = false;
+        let loadingProgress = 0;
+        
+        function updateLoadingProgress() {
+            loadingProgress = Math.round((imagesLoaded / totalImages) * 100);
+            const loadingText = document.querySelector('#loading p');
+            if (loadingText) {
+                loadingText.textContent = `正在加载游戏资源 (${loadingProgress}%)`;
+            }
+        }
         
         function checkImagesLoaded() {
             imagesLoaded++;
+            updateLoadingProgress();
             console.log(`图片加载进度: ${imagesLoaded}/${totalImages}`);
             if (imagesLoaded >= totalImages && !gameStarted) {
                 console.log('所有图片加载完成，开始游戏');
                 gameStarted = true;
-                // 隐藏加载界面，显示游戏
+                // 延迟一点再开始游戏，确保渲染完成
+                setTimeout(() => {
+                    // 隐藏加载界面，显示游戏
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('gameCanvas').style.display = 'block';
+                    document.getElementById('musicBtn').style.display = 'flex';
+                    // 初始化游戏时间
+                    gameState.lastSpawnTime = Date.now();
+                    // 开始游戏循环
+                    gameLoop();
+                }, 500);
+            }
+        }
+        
+        // 加载超时保护（10秒后强制开始游戏）
+        setTimeout(() => {
+            if (!gameStarted) {
+                console.log('加载超时，强制开始游戏');
+                gameStarted = true;
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('gameCanvas').style.display = 'block';
                 document.getElementById('musicBtn').style.display = 'flex';
-                // 开始游戏循环
+                gameState.lastSpawnTime = Date.now();
                 gameLoop();
             }
-        }
+        }, 10000);
 
         campImage.onload = checkImagesLoaded;
         campImage.onerror = () => {
