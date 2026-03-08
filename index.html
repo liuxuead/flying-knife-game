@@ -108,6 +108,7 @@
 <body>
     <canvas id="gameCanvas"></canvas>
     <button class="music-btn" id="soundBtn" onclick="toggleSound()">🔊</button>
+    <button class="music-btn" id="pauseBtn" onclick="togglePause()" style="top: 80px;">⏸️</button>
     <div class="game-over" id="gameOver">
         <h2>游戏结束</h2>
         <p>得分: <span id="finalScore">0</span></p>
@@ -123,6 +124,7 @@
             score: 0,
             health: 100,
             gameOver: false,
+            paused: false, // 游戏暂停状态
             coalBalls: [],
             currentLevel: 1, // 当前关卡
             spawnRate: 3000, // 煤球生成间隔（毫秒）- 3秒
@@ -165,6 +167,21 @@
             } else {
                 soundBtn.textContent = '🔇';
                 soundBtn.classList.add('muted');
+            }
+        }
+
+        // 切换暂停
+        function togglePause() {
+            const pauseBtn = document.getElementById('pauseBtn');
+            
+            gameState.paused = !gameState.paused;
+            
+            if (gameState.paused) {
+                pauseBtn.textContent = '▶️';
+                pauseBtn.classList.add('muted');
+            } else {
+                pauseBtn.textContent = '⏸️';
+                pauseBtn.classList.remove('muted');
             }
         }
 
@@ -482,7 +499,7 @@
 
         // 更新游戏状态
         function update() {
-            if (gameState.gameOver) return;
+            if (gameState.gameOver || gameState.paused) return;
             
             // 检查关卡提升
             checkLevelUp();
@@ -686,11 +703,19 @@
             gameState.score = 0;
             gameState.health = 100;
             gameState.gameOver = false;
+            gameState.paused = false;
             gameState.coalBalls = [];
             gameState.currentLevel = 1;
             gameState.spawnRate = 3000;
             gameState.lastSpawnTime = 0;
             gameState.lastExtraSpawnTime = 0;
+            
+            // 重置暂停按钮状态
+            const pauseBtn = document.getElementById('pauseBtn');
+            if (pauseBtn) {
+                pauseBtn.textContent = '⏸️';
+                pauseBtn.classList.remove('muted');
+            }
             
             document.getElementById('gameOver').style.display = 'none';
         }
@@ -712,6 +737,7 @@
             
             // 触摸事件
             canvas.addEventListener('touchstart', (e) => {
+                if (gameState.paused || gameState.gameOver) return;
                 e.preventDefault();
                 const touch = e.touches[0];
                 touchStartX = touch.clientX;
@@ -720,6 +746,7 @@
             });
             
             canvas.addEventListener('touchend', (e) => {
+                if (gameState.paused || gameState.gameOver) return;
                 e.preventDefault();
                 if (e.changedTouches.length > 0) {
                     const touch = e.changedTouches[0];
@@ -786,6 +813,7 @@
             
             // 鼠标事件（用于调试）
             canvas.addEventListener('click', (e) => {
+                if (gameState.paused || gameState.gameOver) return;
                 const rect = canvas.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
