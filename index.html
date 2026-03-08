@@ -102,66 +102,12 @@
         .music-btn.muted {
             opacity: 0.5;
         }
-        .loading {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            color: white;
-            z-index: 100;
-        }
-        .loading h2 {
-            font-size: 32px;
-            margin-bottom: 30px;
-            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
-            animation: pulse 2s ease-in-out infinite;
-        }
-        .loading p {
-            font-size: 18px;
-            margin-top: 20px;
-            opacity: 0.9;
-        }
-        .spinner {
-            width: 60px;
-            height: 60px;
-            border: 6px solid rgba(255,255,255,0.3);
-            border-top: 6px solid #fff;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.05); opacity: 0.8; }
-        }
-        .game-title {
-            font-size: 48px;
-            font-weight: bold;
-            margin-bottom: 40px;
-            text-shadow: 4px 4px 8px rgba(0,0,0,0.3);
-            animation: pulse 2s ease-in-out infinite;
-        }
+
     </style>
 </head>
 <body>
-    <div class="loading" id="loading">
-        <div class="game-title">进击的煤球</div>
-        <div class="spinner"></div>
-        <h2>加载中...</h2>
-        <p>正在加载游戏资源</p>
-    </div>
-    <canvas id="gameCanvas" style="display: none;"></canvas>
-    <button class="music-btn" id="musicBtn" onclick="toggleMusic()" style="display: none;">🎵</button>
+    <canvas id="gameCanvas"></canvas>
+    <button class="music-btn" id="musicBtn" onclick="toggleMusic()">🎵</button>
     <div class="game-over" id="gameOver">
         <h2>游戏结束</h2>
         <p>得分: <span id="finalScore">0</span></p>
@@ -234,73 +180,18 @@
         const coalBallImage = new Image();
         coalBallImage.src = 'xiaomeiqiu.png';
 
-        // 加载营地图片
+        // 加载煤球图片（可选）
+        const coalBallImage = new Image();
+        coalBallImage.src = 'xiaomeiqiu.png';
+
+        // 加载营地图片（可选）
         const campImage = new Image();
         campImage.src = 'chengbao.png';
 
-        // 加载背景图片
+        // 加载背景图片（可选）
         const backgroundImages = [];
-        let imagesLoaded = 0;
-        const totalImages = 6; // 5张背景 + 1张营地
-
-        let gameStarted = false;
-        let loadingProgress = 0;
-        
-        function updateLoadingProgress() {
-            loadingProgress = Math.round((imagesLoaded / totalImages) * 100);
-            const loadingText = document.querySelector('#loading p');
-            if (loadingText) {
-                loadingText.textContent = `正在加载游戏资源 (${loadingProgress}%)`;
-            }
-        }
-        
-        function checkImagesLoaded() {
-            imagesLoaded++;
-            updateLoadingProgress();
-            console.log(`图片加载进度: ${imagesLoaded}/${totalImages}`);
-            if (imagesLoaded >= totalImages && !gameStarted) {
-                console.log('所有图片加载完成，开始游戏');
-                gameStarted = true;
-                // 延迟一点再开始游戏，确保渲染完成
-                setTimeout(() => {
-                    // 隐藏加载界面，显示游戏
-                    document.getElementById('loading').style.display = 'none';
-                    document.getElementById('gameCanvas').style.display = 'block';
-                    document.getElementById('musicBtn').style.display = 'flex';
-                    // 初始化游戏时间
-                    gameState.lastSpawnTime = Date.now();
-                    // 开始游戏循环
-                    gameLoop();
-                }, 500);
-            }
-        }
-        
-        // 加载超时保护（10秒后强制开始游戏）
-        setTimeout(() => {
-            if (!gameStarted) {
-                console.log('加载超时，强制开始游戏');
-                gameStarted = true;
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('gameCanvas').style.display = 'block';
-                document.getElementById('musicBtn').style.display = 'flex';
-                gameState.lastSpawnTime = Date.now();
-                gameLoop();
-            }
-        }, 10000);
-
-        campImage.onload = checkImagesLoaded;
-        campImage.onerror = () => {
-            console.log('营地图片加载失败');
-            checkImagesLoaded();
-        };
-
         for (let i = 1; i <= 5; i++) {
             const img = new Image();
-            img.onload = checkImagesLoaded;
-            img.onerror = () => {
-                console.log(`背景图片${i}加载失败`);
-                checkImagesLoaded();
-            };
             img.src = `background${i}.png`;
             backgroundImages.push(img);
         }
@@ -421,8 +312,7 @@
             ctx.save();
             
             // 使用图片绘制煤球
-            // 图片大小64x64，煤球半径20，所以图片大小应该是40x40
-            const imageSize = config.coalBallSize * 2; // 40像素
+            const imageSize = config.coalBallSize * 2;
             ctx.drawImage(
                 coalBallImage, 
                 coalBall.x - imageSize / 2, 
@@ -438,9 +328,10 @@
         function drawCamp() {
             ctx.save();
             
-            // 使用图片绘制营地
             const halfWidth = config.campWidth / 2;
             const halfHeight = config.campHeight / 2;
+            
+            // 使用图片绘制营地
             ctx.drawImage(
                 campImage,
                 campPosition.x - halfWidth,
@@ -859,7 +750,9 @@
                 bounceCoalBall(x, y);
             });
             
-            // 注意：gameLoop现在在图片加载完成后才调用
+            // 初始化游戏时间并开始游戏循环
+            gameState.lastSpawnTime = Date.now();
+            gameLoop();
         }
         
         // 计算点到线段的距离
