@@ -107,7 +107,7 @@
 
         // 关卡配置
         const levelConfig = {
-            levelScores: [0, 1000, 2000, 3000, 5000], // 每关的分数目标
+            levelScores: [0, 300, 1000, 2000, 3000], // 每关的分数目标
             speedMultipliers: [1, 1.5, 2, 2.5, 3], // 每关的速度倍数
             maxCoalBalls: [3, 5, 7, 9, 12], // 每关屏幕内最大煤球数量
             backgroundImages: ['', '', '', '', ''], // 预留背景图片路径
@@ -148,6 +148,10 @@
         // 获取Canvas元素
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+
+        // 加载煤球图片
+        const coalBallImage = new Image();
+        coalBallImage.src = 'xiaomeiqiu.png';
 
         // 营地位置（中心坐标）
         let campPosition = {
@@ -233,52 +237,16 @@
         function drawCoalBall(coalBall) {
             ctx.save();
             
-            // 绘制煤球主体
-            ctx.beginPath();
-            ctx.arc(coalBall.x, coalBall.y, config.coalBallSize, 0, Math.PI * 2);
-            ctx.fillStyle = '#333';
-            ctx.fill();
-            
-            // 绘制绒毛
-            for (let i = 0; i < 12; i++) {
-                const angle = (Math.PI * 2 / 12) * i;
-                const x = coalBall.x + Math.cos(angle) * (config.coalBallSize + 5);
-                const y = coalBall.y + Math.sin(angle) * (config.coalBallSize + 5);
-                
-                ctx.beginPath();
-                ctx.arc(x, y, 3, 0, Math.PI * 2);
-                ctx.fillStyle = '#555';
-                ctx.fill();
-            }
-            
-            // 绘制眼睛
-            ctx.beginPath();
-            ctx.arc(coalBall.x - 8, coalBall.y - 5, 4, 0, Math.PI * 2);
-            ctx.fillStyle = 'white';
-            ctx.fill();
-            
-            ctx.beginPath();
-            ctx.arc(coalBall.x + 8, coalBall.y - 5, 4, 0, Math.PI * 2);
-            ctx.fillStyle = 'white';
-            ctx.fill();
-            
-            // 绘制眼球
-            ctx.beginPath();
-            ctx.arc(coalBall.x - 8, coalBall.y - 5, 2, 0, Math.PI * 2);
-            ctx.fillStyle = 'black';
-            ctx.fill();
-            
-            ctx.beginPath();
-            ctx.arc(coalBall.x + 8, coalBall.y - 5, 2, 0, Math.PI * 2);
-            ctx.fillStyle = 'black';
-            ctx.fill();
-            
-            // 绘制嘴巴
-            ctx.beginPath();
-            ctx.arc(coalBall.x, coalBall.y + 5, 5, 0, Math.PI);
-            ctx.strokeStyle = 'black';
-            ctx.lineWidth = 2;
-            ctx.stroke();
+            // 使用图片绘制煤球
+            // 图片大小64x64，煤球半径20，所以图片大小应该是40x40
+            const imageSize = config.coalBallSize * 2; // 40像素
+            ctx.drawImage(
+                coalBallImage, 
+                coalBall.x - imageSize / 2, 
+                coalBall.y - imageSize / 2, 
+                imageSize, 
+                imageSize
+            );
             
             ctx.restore();
         }
