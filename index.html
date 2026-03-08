@@ -101,7 +101,7 @@
             gameOver: false,
             coalBalls: [],
             currentLevel: 1, // 当前关卡
-            spawnRate: 5000, // 煤球生成间隔（毫秒）- 测试用5秒
+            spawnRate: 3000, // 煤球生成间隔（毫秒）- 3秒
             lastSpawnTime: 0
         };
 
@@ -109,6 +109,7 @@
         const levelConfig = {
             levelScores: [0, 1000, 2000, 3000, 5000], // 每关的分数目标
             speedMultipliers: [1, 1.5, 2, 2.5, 3], // 每关的速度倍数
+            maxCoalBalls: [3, 5, 7, 9, 12], // 每关屏幕内最大煤球数量
             backgroundImages: ['', '', '', '', ''], // 预留背景图片路径
             campColors: [
                 'rgba(139, 69, 19, 0.2)', // 第1关：棕色
@@ -409,7 +410,12 @@
             
             // 生成煤球
             const currentTime = Date.now();
-            if (currentTime - gameState.lastSpawnTime > gameState.spawnRate) {
+            const maxCoalBalls = levelConfig.maxCoalBalls[gameState.currentLevel - 1];
+            
+            // 检查当前屏幕内的煤球数量（不包括正在弹飞的）
+            const activeCoalBalls = gameState.coalBalls.filter(ball => !ball.isBouncing).length;
+            
+            if (currentTime - gameState.lastSpawnTime > gameState.spawnRate && activeCoalBalls < maxCoalBalls) {
                 spawnCoalBall();
                 gameState.lastSpawnTime = currentTime;
                 
@@ -532,7 +538,7 @@
                     Math.pow(x - coalBall.x, 2) + Math.pow(y - coalBall.y, 2)
                 );
                 
-                if (distance <= config.coalBallSize + 10) {
+                if (distance <= config.coalBallSize + 20) {
                     // 计算反弹方向（远离点击位置）
                     const angle = Math.atan2(coalBall.y - y, coalBall.x - x);
                     
@@ -581,7 +587,7 @@
             gameState.gameOver = false;
             gameState.coalBalls = [];
             gameState.currentLevel = 1;
-            gameState.spawnRate = 5000;
+            gameState.spawnRate = 3000;
             gameState.lastSpawnTime = 0;
             
             document.getElementById('gameOver').style.display = 'none';
@@ -638,7 +644,7 @@
                                 touchEndX, touchEndY
                             );
                             
-                            if (distanceToLine < config.coalBallSize + 25) {
+                            if (distanceToLine < config.coalBallSize + 35) {
                                 // 计算反弹方向（按照手指滑动的方向）
                                 // 这里使用从煤球到滑动终点的方向，这样更符合弹飞的感觉
                                 const rect = canvas.getBoundingClientRect();
