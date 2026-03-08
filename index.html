@@ -133,7 +133,7 @@
             levelScores: [0, 300, 1000, 2000, 3000], // 每关的分数目标
             speedMultipliers: [1, 1.8, 2.5, 3.5, 5], // 每关的速度倍数（加大差距）
             maxCoalBalls: [3, 5, 7, 9, 12], // 每关屏幕内最大煤球数量
-            backgroundImages: ['', '', '', '', ''], // 预留背景图片路径
+            backgroundImages: ['background1.png', 'background2.png', 'background3.png', 'background4.png', 'background5.png'], // 每关背景图片
             campColors: [
                 'rgba(139, 69, 19, 0.2)', // 第1关：棕色
                 'rgba(0, 100, 0, 0.2)',   // 第2关：深绿色
@@ -180,6 +180,14 @@
         // 加载营地图片
         const campImage = new Image();
         campImage.src = 'chengbao.png';
+
+        // 加载背景图片
+        const backgroundImages = [];
+        for (let i = 1; i <= 5; i++) {
+            const img = new Image();
+            img.src = `background${i}.png`;
+            backgroundImages.push(img);
+        }
 
         // 背景音乐
         let bgMusic = null;
@@ -369,19 +377,26 @@
 
         // 绘制背景
         function drawBackground() {
-            // 获取当前关卡的背景渐变颜色
-            const gradientColors = levelConfig.backgroundGradients[gameState.currentLevel - 1];
+            // 获取当前关卡的背景图片
+            const currentLevelIndex = gameState.currentLevel - 1;
+            const bgImage = backgroundImages[currentLevelIndex];
             
-            // 渐变背景
-            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            gradient.addColorStop(0, gradientColors[0]);
-            gradient.addColorStop(1, gradientColors[1]);
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // 绘制简单的草地
-            ctx.fillStyle = '#228B22';
-            ctx.fillRect(0, canvas.height * 0.8, canvas.width, canvas.height * 0.2);
+            if (bgImage && bgImage.complete) {
+                // 使用背景图片
+                ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+            } else {
+                // 图片未加载完成时，使用渐变背景作为备用
+                const gradientColors = levelConfig.backgroundGradients[currentLevelIndex];
+                const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                gradient.addColorStop(0, gradientColors[0]);
+                gradient.addColorStop(1, gradientColors[1]);
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // 绘制简单的草地
+                ctx.fillStyle = '#228B22';
+                ctx.fillRect(0, canvas.height * 0.8, canvas.width, canvas.height * 0.2);
+            }
         }
 
         // 检查碰撞（方形碰撞检测）
