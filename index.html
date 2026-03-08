@@ -136,7 +136,8 @@
 
         // 游戏配置
         const config = {
-            campRadius: 100, // 营地半径（像素）
+            campWidth: 200, // 营地宽度（像素）
+            campHeight: 200, // 营地高度（像素）
             coalBallSize: 20, // 煤球大小（半径）
             coalBallSpeed: 2, // 煤球移动速度
             coalBallMaxTime: 3000, // 煤球最大停留时间（毫秒）
@@ -206,8 +207,8 @@
             }
 
             // 目标位置：营地中心附近
-            const targetX = campPosition.x + (Math.random() - 0.5) * config.campRadius * 0.5;
-            const targetY = campPosition.y + (Math.random() - 0.5) * config.campRadius * 0.5;
+            const targetX = campPosition.x + (Math.random() - 0.5) * config.campWidth * 0.5;
+            const targetY = campPosition.y + (Math.random() - 0.5) * config.campHeight * 0.5;
 
             // 根据关卡调整速度
             const speedMultiplier = levelConfig.speedMultipliers[gameState.currentLevel - 1];
@@ -259,29 +260,27 @@
             const campColor = levelConfig.campColors[gameState.currentLevel - 1];
             const borderColor = levelConfig.campBorderColors[gameState.currentLevel - 1];
             
-            // 绘制营地范围（半透明圆形）
-            ctx.beginPath();
-            ctx.arc(campPosition.x, campPosition.y, config.campRadius, 0, Math.PI * 2);
+            // 绘制营地范围（方形）
+            const halfWidth = config.campWidth / 2;
+            const halfHeight = config.campHeight / 2;
             ctx.fillStyle = campColor;
-            ctx.fill();
+            ctx.fillRect(campPosition.x - halfWidth, campPosition.y - halfHeight, config.campWidth, config.campHeight);
             ctx.strokeStyle = borderColor;
             ctx.lineWidth = 3;
-            ctx.stroke();
+            ctx.strokeRect(campPosition.x - halfWidth, campPosition.y - halfHeight, config.campWidth, config.campHeight);
             
             // 绘制营地中心标志
-            ctx.beginPath();
-            ctx.arc(campPosition.x, campPosition.y, 20, 0, Math.PI * 2);
             ctx.fillStyle = borderColor;
-            ctx.fill();
+            ctx.fillRect(campPosition.x - 20, campPosition.y - 20, 40, 40);
             ctx.strokeStyle = '#FFD700';
             ctx.lineWidth = 2;
-            ctx.stroke();
+            ctx.strokeRect(campPosition.x - 20, campPosition.y - 20, 40, 40);
             
             // 绘制营地名
             ctx.fillStyle = 'white';
             ctx.font = '16px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText('玩家营地', campPosition.x, campPosition.y - config.campRadius - 10);
+            ctx.fillText('玩家营地', campPosition.x, campPosition.y - halfHeight - 10);
             
             ctx.restore();
         }
@@ -336,29 +335,32 @@
             ctx.fillRect(0, canvas.height * 0.8, canvas.width, canvas.height * 0.2);
         }
 
-        // 检查碰撞（圆形碰撞检测）
+        // 检查碰撞（方形碰撞检测）
         function checkCollision(pos) {
-            // 计算煤球与营地中心的距离
-            const distance = Math.sqrt(
-                Math.pow(pos.x - campPosition.x, 2) + 
-                Math.pow(pos.y - campPosition.y, 2)
-            );
+            // 检查煤球是否在方形营地范围内
+            const halfWidth = config.campWidth / 2;
+            const halfHeight = config.campHeight / 2;
             
-            // 检查是否在营地范围内（当煤球边缘进入营地时触发）
-            return distance <= config.campRadius;
+            return (
+                pos.x >= campPosition.x - halfWidth &&
+                pos.x <= campPosition.x + halfWidth &&
+                pos.y >= campPosition.y - halfHeight &&
+                pos.y <= campPosition.y + halfHeight
+            );
         }
 
         // 检查煤球是否完全进入营地内部（用于扣血判断）
         function checkFullyInsideCamp(pos) {
-            // 计算煤球与营地中心的距离
-            const distance = Math.sqrt(
-                Math.pow(pos.x - campPosition.x, 2) + 
-                Math.pow(pos.y - campPosition.y, 2)
-            );
+            // 检查煤球是否完全在方形营地内部（考虑煤球半径）
+            const halfWidth = config.campWidth / 2 - config.coalBallSize;
+            const halfHeight = config.campHeight / 2 - config.coalBallSize;
             
-            // 只有当煤球完全进入营地内部才算首次攻击
-            // 营地半径减去煤球半径，这样煤球完全在营地内部才算
-            return distance <= config.campRadius - config.coalBallSize;
+            return (
+                pos.x >= campPosition.x - halfWidth &&
+                pos.x <= campPosition.x + halfWidth &&
+                pos.y >= campPosition.y - halfHeight &&
+                pos.y <= campPosition.y + halfHeight
+            );
         }
 
         // 检查关卡提升
@@ -448,18 +450,24 @@
                 
                 // 如果煤球在营地内且不是正在弹飞，限制其在营地范围内移动
                 if (inCamp && coalBall.restricted) {
-                    const distanceFromCenter = Math.sqrt(
-                        Math.pow(coalBall.x - campPosition.x, 2) + 
-                        Math.pow(coalBall.y - campPosition.y, 2)
-                    );
+                    const halfWidth = config.campWidth / 2 - config.coalBallSize;
+                    const halfHeight = config.campHeight / 2 - config.coalBallSize;
                     
-                    // 如果超出营地范围，将其拉回边界内
-                    if (distanceFromCenter > config.campRadius - config.coalBallSize) {
-                        const angle = Math.atan2(coalBall.y - campPosition.y, coalBall.x - campPosition.x);
-                        coalBall.x = campPosition.x + Math.cos(angle) * (config.campRadius - config.coalBallSize);
-                        coalBall.y = campPosition.y + Math.sin(angle) * (config.campRadius - config.coalBallSize);
-                        // 在边界内随机改变方向
-                        coalBall.angle = Math.atan2(campPosition.y - coalBall.y, campPosition.x - coalBall.x) + (Math.random() - 0.5) * Math.PI;
+                    // 如果超出方形营地范围，将其拉回边界内
+                    if (coalBall.x < campPosition.x - halfWidth) {
+                        coalBall.x = campPosition.x - halfWidth;
+                        coalBall.angle = Math.random() * Math.PI * 2;
+                    } else if (coalBall.x > campPosition.x + halfWidth) {
+                        coalBall.x = campPosition.x + halfWidth;
+                        coalBall.angle = Math.random() * Math.PI * 2;
+                    }
+                    
+                    if (coalBall.y < campPosition.y - halfHeight) {
+                        coalBall.y = campPosition.y - halfHeight;
+                        coalBall.angle = Math.random() * Math.PI * 2;
+                    } else if (coalBall.y > campPosition.y + halfHeight) {
+                        coalBall.y = campPosition.y + halfHeight;
+                        coalBall.angle = Math.random() * Math.PI * 2;
                     }
                 }
                 
