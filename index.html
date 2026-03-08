@@ -125,7 +125,8 @@
             coalBalls: [],
             currentLevel: 1, // 当前关卡
             spawnRate: 3000, // 煤球生成间隔（毫秒）- 3秒
-            lastSpawnTime: 0
+            lastSpawnTime: 0,
+            lastExtraSpawnTime: 0 // 上次额外生成煤球的时间
         };
 
         // 背景音乐
@@ -185,7 +186,8 @@
                 ['#4B0082', '#8B008B'], // 第4关：靛青到深紫
                 ['#8B0000', '#FF4500']  // 第5关：深红到橙红
             ],
-            coalBallMaxTimes: [3000, 2500, 2000, 1500, 1000] // 每关煤球最大停留时间（毫秒），逐关缩短
+            coalBallMaxTimes: [3000, 2500, 2000, 1500, 1000], // 每关煤球最大停留时间（毫秒），逐关缩短
+            extraSpawnIntervals: [null, 6000, 4000, 3000, 2000] // 每关额外生成煤球的间隔（毫秒），第1关无额外生成
         };
 
         // 游戏配置
@@ -490,6 +492,13 @@
                 }
             }
             
+            // 额外生成煤球（从第2关开始）
+            const extraSpawnInterval = levelConfig.extraSpawnIntervals[gameState.currentLevel - 1];
+            if (extraSpawnInterval && currentTime - gameState.lastExtraSpawnTime > extraSpawnInterval && activeCoalBalls < maxCoalBalls) {
+                spawnCoalBall();
+                gameState.lastExtraSpawnTime = currentTime;
+            }
+            
             // 更新煤球
             for (let i = gameState.coalBalls.length - 1; i >= 0; i--) {
                 const coalBall = gameState.coalBalls[i];
@@ -666,6 +675,7 @@
             gameState.currentLevel = 1;
             gameState.spawnRate = 3000;
             gameState.lastSpawnTime = 0;
+            gameState.lastExtraSpawnTime = 0;
             
             document.getElementById('gameOver').style.display = 'none';
         }
