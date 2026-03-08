@@ -206,7 +206,19 @@
 
         // 加载煤球图片
         const coalBallImage = new Image();
-        coalBallImage.src = 'xiaomeiqiu.png';
+        coalBallImage.src = 'xiaomeiqiu.jpg';
+
+        // 加载营地图片
+        const campImage = new Image();
+        campImage.src = 'chengbao.jpg';
+
+        // 加载背景图片
+        const backgroundImages = [];
+        for (let i = 0; i < 5; i++) {
+            const img = new Image();
+            img.src = `background${i + 1}.jpg`;
+            backgroundImages.push(img);
+        }
 
         // 营地位置（中心坐标）
         let campPosition = {
@@ -310,25 +322,28 @@
         function drawCamp() {
             ctx.save();
             
-            // 获取当前关卡的营地颜色
-            const campColor = levelConfig.campColors[gameState.currentLevel - 1];
-            const borderColor = levelConfig.campBorderColors[gameState.currentLevel - 1];
-            
-            // 绘制营地范围（方形）
             const halfWidth = config.campWidth / 2;
             const halfHeight = config.campHeight / 2;
-            ctx.fillStyle = campColor;
-            ctx.fillRect(campPosition.x - halfWidth, campPosition.y - halfHeight, config.campWidth, config.campHeight);
-            ctx.strokeStyle = borderColor;
-            ctx.lineWidth = 3;
-            ctx.strokeRect(campPosition.x - halfWidth, campPosition.y - halfHeight, config.campWidth, config.campHeight);
             
-            // 绘制营地中心标志
-            ctx.fillStyle = borderColor;
-            ctx.fillRect(campPosition.x - 20, campPosition.y - 20, 40, 40);
-            ctx.strokeStyle = '#FFD700';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(campPosition.x - 20, campPosition.y - 20, 40, 40);
+            // 使用图片绘制营地
+            if (campImage && campImage.complete) {
+                ctx.drawImage(
+                    campImage,
+                    campPosition.x - halfWidth,
+                    campPosition.y - halfHeight,
+                    config.campWidth,
+                    config.campHeight
+                );
+            } else {
+                // 图片未加载完成时，使用颜色绘制
+                const campColor = levelConfig.campColors[gameState.currentLevel - 1];
+                const borderColor = levelConfig.campBorderColors[gameState.currentLevel - 1];
+                ctx.fillStyle = campColor;
+                ctx.fillRect(campPosition.x - halfWidth, campPosition.y - halfHeight, config.campWidth, config.campHeight);
+                ctx.strokeStyle = borderColor;
+                ctx.lineWidth = 3;
+                ctx.strokeRect(campPosition.x - halfWidth, campPosition.y - halfHeight, config.campWidth, config.campHeight);
+            }
             
             // 绘制营地名
             ctx.fillStyle = 'white';
@@ -374,19 +389,26 @@
 
         // 绘制背景
         function drawBackground() {
-            // 获取当前关卡的背景渐变颜色
-            const gradientColors = levelConfig.backgroundGradients[gameState.currentLevel - 1];
+            // 获取当前关卡的背景图片
+            const currentLevelIndex = gameState.currentLevel - 1;
+            const bgImage = backgroundImages[currentLevelIndex];
             
-            // 渐变背景
-            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            gradient.addColorStop(0, gradientColors[0]);
-            gradient.addColorStop(1, gradientColors[1]);
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // 绘制简单的草地
-            ctx.fillStyle = '#228B22';
-            ctx.fillRect(0, canvas.height * 0.8, canvas.width, canvas.height * 0.2);
+            if (bgImage && bgImage.complete) {
+                // 使用背景图片
+                ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+            } else {
+                // 图片未加载完成时，使用渐变背景作为备用
+                const gradientColors = levelConfig.backgroundGradients[currentLevelIndex];
+                const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                gradient.addColorStop(0, gradientColors[0]);
+                gradient.addColorStop(1, gradientColors[1]);
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // 绘制简单的草地
+                ctx.fillStyle = '#228B22';
+                ctx.fillRect(0, canvas.height * 0.8, canvas.width, canvas.height * 0.2);
+            }
         }
 
         // 检查碰撞（方形碰撞检测）
