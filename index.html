@@ -81,6 +81,47 @@
             0%, 100% { opacity: 0; }
             20%, 80% { opacity: 1; }
         }
+        .victory {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #fff;
+            padding: 50px 80px;
+            border-radius: 30px;
+            text-align: center;
+            z-index: 200;
+            display: none;
+            animation: victoryPulse 1s ease-in-out infinite;
+            box-shadow: 0 0 50px rgba(255, 215, 0, 0.8);
+        }
+        .victory h2 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .victory p {
+            font-size: 24px;
+            margin-bottom: 30px;
+        }
+        .victory button {
+            padding: 15px 40px;
+            font-size: 20px;
+            background: #fff;
+            color: #FFD700;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .victory button:hover {
+            background: #f0f0f0;
+        }
+        @keyframes victoryPulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.05); }
+        }
         .music-btn {
             position: absolute;
             top: 20px;
@@ -117,6 +158,11 @@
     <div class="level-up" id="levelUp">
         <h2>关卡提升！</h2>
         <p>第 <span id="currentLevelDisplay">1</span> 关</p>
+    </div>
+    <div class="victory" id="victory">
+        <h2>🎉 恭喜通关！🎉</h2>
+        <p>最终得分: <span id="victoryScore">0</span></p>
+        <button onclick="restartGame()">再玩一次</button>
     </div>
     <script>
         // 游戏状态
@@ -187,7 +233,7 @@
 
         // 关卡配置
         const levelConfig = {
-            levelScores: [0, 300, 1000, 2000, 3000, 5000], // 每关的分数目标
+            levelScores: [0, 100, 500, 1100, 2200, 3500, 5000], // 每关的分数目标，5000分为通关
             speedMultipliers: [1, 1.8, 2.5, 3.5, 5, 7], // 每关的速度倍数（加大差距）
             maxCoalBalls: [3, 5, 7, 9, 12, 15], // 每关屏幕内最大煤球数量
             backgroundImages: ['', '', '', ''], // 预留背景图片路径
@@ -479,6 +525,12 @@
                     const oldLevel = gameState.currentLevel;
                     gameState.currentLevel = nextLevel;
                     
+                    // 检查是否通关（第7关）
+                    if (gameState.currentLevel === 7) {
+                        showVictory();
+                        return;
+                    }
+                    
                     // 关卡奖励机制
                     if (gameState.currentLevel === 4 && oldLevel < 4) {
                         gameState.health = 100; // 第4关：恢复到100
@@ -503,6 +555,13 @@
                     }, 2000);
                 }
             }
+        }
+
+        // 显示通关动画
+        function showVictory() {
+            gameState.gameOver = true;
+            document.getElementById('victoryScore').textContent = gameState.score;
+            document.getElementById('victory').style.display = 'block';
         }
 
         // 更新游戏状态
@@ -726,6 +785,7 @@
             }
             
             document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('victory').style.display = 'none';
         }
 
         // 触摸滑动状态
