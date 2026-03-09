@@ -241,7 +241,7 @@
 
         // 加载营地图片
         const campImage = new Image();
-        campImage.src = 'chengbao.png';
+        campImage.src = 'chengbao.png?v=2';
 
         // 加载背景图片
         const backgroundImages = [];
@@ -479,9 +479,17 @@
                     const oldLevel = gameState.currentLevel;
                     gameState.currentLevel = nextLevel;
                     
-                    // 第4关开始恢复血条（只在进入第4关时恢复一次）
+                    // 关卡奖励机制
                     if (gameState.currentLevel === 4 && oldLevel < 4) {
-                        gameState.health = Math.min(100, gameState.health + 30); // 恢复30点生命值，最多100
+                        gameState.health = 100; // 第4关：恢复到100
+                    } else if (gameState.currentLevel === 5 && oldLevel < 5) {
+                        if (gameState.health < 80) {
+                            gameState.health = 80; // 第5关：恢复到80
+                        }
+                    } else if (gameState.currentLevel === 6 && oldLevel < 6) {
+                        if (gameState.health < 60) {
+                            gameState.health = 60; // 第6关：恢复到60
+                        }
                     }
                     
                     // 显示关卡提升提示
