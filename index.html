@@ -453,8 +453,8 @@
             ctx.textAlign = 'left';
             ctx.fillText('生命值: ' + gameState.health, 230, 35);
             
-            // 绘制得分
-            ctx.fillText('得分: ' + gameState.score, 20, 70);
+            // 绘制得分和历史最高分
+            ctx.fillText('得分: ' + gameState.score + ' / 历史最高分: ' + gameState.highScore, 20, 70);
             
             // 绘制关卡
             ctx.fillText('关卡: ' + gameState.currentLevel, 20, 100);
@@ -755,8 +755,18 @@
                     // 设置正在弹飞标志
                     coalBall.isBouncing = true;
                     
-                    // 增加得分
-                    gameState.score += 10;
+                    // 判断煤球是否在营地内
+                    const inCamp = checkCollision(coalBall);
+                    
+                    // 根据位置给分：营地外+20分，营地内+0分
+                    if (!inCamp) {
+                        gameState.score += 20;
+                        
+                        // 如果音效开启，震动手机
+                        if (isSoundEnabled && navigator.vibrate) {
+                            navigator.vibrate(50); // 震动50毫秒
+                        }
+                    }
                     
                     // 播放弹开音效
                     playSound('bounce');
@@ -883,8 +893,18 @@
                                 // 设置正在弹飞标志
                                 coalBall.isBouncing = true;
                                 
-                                // 增加得分
-                                gameState.score += 10;
+                                // 判断煤球是否在营地内
+                                const inCamp = checkCollision(coalBall);
+                                
+                                // 根据位置给分：营地外+20分，营地内+0分
+                                if (!inCamp) {
+                                    gameState.score += 20;
+                                    
+                                    // 如果音效开启，震动手机
+                                    if (isSoundEnabled && navigator.vibrate) {
+                                        navigator.vibrate(50); // 震动50毫秒
+                                    }
+                                }
                                 
                                 // 播放弹开音效
                                 playSound('bounce');
