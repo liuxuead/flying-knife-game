@@ -167,6 +167,14 @@
         <button onclick="restartGame()">再玩一次</button>
     </div>
     <script>
+        // 设备检测
+        function isPC() {
+            return !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        }
+        
+        // 速度调节系数：PC机慢2倍
+        const deviceSpeedMultiplier = isPC() ? 0.5 : 1;
+        
         // 游戏状态
         const gameState = {
             score: 0,
@@ -368,7 +376,7 @@
                 lastY: y,
                 targetX: targetX,
                 targetY: targetY,
-                speed: baseSpeed * speedMultiplier, // 应用关卡速度倍数
+                speed: baseSpeed * speedMultiplier * deviceSpeedMultiplier, // 应用关卡速度倍数和设备速度倍数
                 angle: Math.atan2(targetY - y, targetX - x),
                 timeInCamp: 0,
                 lastHealthDecrease: 0,
@@ -590,7 +598,7 @@
             // 检查当前屏幕内的煤球数量（不包括正在弹飞的）
             const activeCoalBalls = gameState.coalBalls.filter(ball => !ball.isBouncing).length;
             
-            if (currentTime - gameState.lastSpawnTime > gameState.spawnRate && activeCoalBalls < maxCoalBalls) {
+            if (currentTime - gameState.lastSpawnTime > gameState.spawnRate / deviceSpeedMultiplier && activeCoalBalls < maxCoalBalls) {
                 spawnCoalBall();
                 gameState.lastSpawnTime = currentTime;
                 
@@ -602,7 +610,7 @@
             
             // 额外生成煤球（从第2关开始）
             const extraSpawnInterval = levelConfig.extraSpawnIntervals[gameState.currentLevel - 1];
-            if (extraSpawnInterval && currentTime - gameState.lastExtraSpawnTime > extraSpawnInterval && activeCoalBalls < maxCoalBalls) {
+            if (extraSpawnInterval && currentTime - gameState.lastExtraSpawnTime > extraSpawnInterval / deviceSpeedMultiplier && activeCoalBalls < maxCoalBalls) {
                 spawnCoalBall();
                 gameState.lastExtraSpawnTime = currentTime;
             }
@@ -750,7 +758,7 @@
                     coalBall.targetX = coalBall.x + Math.cos(angle) * bounceDistance;
                     coalBall.targetY = coalBall.y + Math.sin(angle) * bounceDistance;
                     coalBall.angle = angle;
-                    coalBall.speed = 5; // 弹开速度
+                    coalBall.speed = 5 * deviceSpeedMultiplier; // 弹开速度
                     
                     // 设置正在弹飞标志
                     coalBall.isBouncing = true;
@@ -888,7 +896,7 @@
                                 coalBall.targetX = coalBall.x + Math.cos(angle) * bounceDistance;
                                 coalBall.targetY = coalBall.y + Math.sin(angle) * bounceDistance;
                                 coalBall.angle = angle;
-                                coalBall.speed = 8; // 弹开速度
+                                coalBall.speed = 8 * deviceSpeedMultiplier; // 弹开速度
                                 
                                 // 设置正在弹飞标志
                                 coalBall.isBouncing = true;
@@ -918,6 +926,29 @@
                         bounceCoalBall(x, y);
                     }
                 }
+            });
+            
+            // 鼠标移动事件（检测是否悬停在煤球上）
+            canvas.addEventListener('mousemove', (e) => {
+                if (gameState.paused || gameState.gameOver) return;
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                // 检查是否悬停在煤球上
+                let isHovering = false;
+                for (const coalBall of gameState.coalBalls) {
+                    const distance = Math.sqrt(
+                        Math.pow(x - coalBall.x, 2) + Math.pow(y - coalBall.y, 2)
+                    );
+                    if (distance <= config.coalBallSize + 20) {
+                        isHovering = true;
+                        break;
+                    }
+                }
+                
+                // 设置鼠标样式
+                canvas.style.cursor = isHovering ? 'pointer' : 'default';
             });
             
             // 鼠标事件（用于调试）
