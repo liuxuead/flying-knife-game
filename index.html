@@ -153,6 +153,7 @@
     <div class="game-over" id="gameOver">
         <h2>游戏结束</h2>
         <p>得分: <span id="finalScore">0</span></p>
+        <p>历史最高分: <span id="highScore">0</span></p>
         <button onclick="restartGame()">重新开始</button>
     </div>
     <div class="level-up" id="levelUp">
@@ -162,6 +163,7 @@
     <div class="victory" id="victory">
         <h2>🎉 恭喜通关！🎉</h2>
         <p>最终得分: <span id="victoryScore">0</span></p>
+        <p>历史最高分: <span id="victoryHighScore">0</span></p>
         <button onclick="restartGame()">再玩一次</button>
     </div>
     <script>
@@ -175,7 +177,8 @@
             currentLevel: 1, // 当前关卡
             spawnRate: 3000, // 煤球生成间隔（毫秒）- 3秒
             lastSpawnTime: 0,
-            lastExtraSpawnTime: 0 // 上次额外生成煤球的时间
+            lastExtraSpawnTime: 0, // 上次额外生成煤球的时间
+            highScore: parseInt(localStorage.getItem('coalBallHighScore')) || 0 // 历史最高分
         };
 
         // 音效系统
@@ -233,9 +236,9 @@
 
         // 关卡配置
         const levelConfig = {
-            levelScores: [0, 70, 500, 1100, 2200, 3500, 5000], // 每关的分数目标，5000分为通关
+            levelScores: [0, 100, 500, 1100, 2200, 3500, 5000], // 每关的分数目标，5000分为通关
             speedMultipliers: [1, 1.8, 2.5, 3.5, 5, 7], // 每关的速度倍数（加大差距）
-            maxCoalBalls: [5, 7, 9, 15, 20, 30], // 每关屏幕内最大煤球数量
+            maxCoalBalls: [3, 5, 7, 9, 12, 15], // 每关屏幕内最大煤球数量
             backgroundImages: ['', '', '', ''], // 预留背景图片路径
             campColors: [
                 'rgba(139, 69, 19, 0.2)', // 第1关：棕色
@@ -261,7 +264,7 @@
                 ['#8B0000', '#FF4500'], // 第5关：深红到橙红
                 ['#FFD700', '#FF8C00']  // 第6关：金色到橙红
             ],
-            coalBallMaxTimes: [2000, 1500, 800, 500, 300, 150], // 每关煤球最大停留时间（毫秒），逐关缩短，第1关就开始扣血
+            coalBallMaxTimes: [2000, 1500, 1000, 800, 500, 300], // 每关煤球最大停留时间（毫秒），逐关缩短，第1关就开始扣血
             extraSpawnIntervals: [null, 6000, 4000, 3000, 2000, 1500] // 每关额外生成煤球的间隔（毫秒），第1关无额外生成
         };
 
@@ -561,6 +564,15 @@
         function showVictory() {
             gameState.gameOver = true;
             document.getElementById('victoryScore').textContent = gameState.score;
+            
+            // 更新最高分
+            if (gameState.score > gameState.highScore) {
+                gameState.highScore = gameState.score;
+                localStorage.setItem('coalBallHighScore', gameState.highScore);
+            }
+            
+            // 显示最高分
+            document.getElementById('victoryHighScore').textContent = gameState.highScore;
             document.getElementById('victory').style.display = 'block';
         }
 
@@ -706,6 +718,15 @@
             if (gameState.health <= 0) {
                 gameState.gameOver = true;
                 document.getElementById('finalScore').textContent = gameState.score;
+                
+                // 更新最高分
+                if (gameState.score > gameState.highScore) {
+                    gameState.highScore = gameState.score;
+                    localStorage.setItem('coalBallHighScore', gameState.highScore);
+                }
+                
+                // 显示最高分
+                document.getElementById('highScore').textContent = gameState.highScore;
                 document.getElementById('gameOver').style.display = 'block';
             }
         }
